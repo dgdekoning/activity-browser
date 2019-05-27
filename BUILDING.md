@@ -21,5 +21,6 @@ In order to build a functioning standalone package we currently (May 2019) need 
   - Go into the newly created `dist/activity-browser` folder. This the `root` folder containing the `activity-browser.exe` executable.
   - Move the `qtwebengine_locales` folder from `PyQt5/Qt/translations` to the `root` folder.
   - Move all of the files in `PyQt5/Qt/resources` to the `root` folder.
-  - Move the `QtWebEngineProcess.exe` file from `PyQt5/Qt/bin` to the `root` folder.
+  - Move the `QtWebEngineProcess.exe` and `opengl32sw.dll` files from `PyQt5/Qt/bin` to the `root` folder.
+  - Go to the anaconda environment folder for the environment used to build the executable. There, look in the `Library/bin` folder for the `libGLESv2.dll` and `libEGL.dll` files. Copy these over as well.
   - Check that everything works by running the `activity-browser.exe` file.
