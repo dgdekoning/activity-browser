@@ -51,9 +51,21 @@ class ProjectDatabaseTab(BaseRightTab):
     and a warning message will appear if an error occurs.
     """
     def __init__(self, parent=None):
-        self.project_table = None
-        self.database_table = None
         super().__init__(parent)
+
+        self.project_table = ProjectParameterTable(self)
+        self.database_table = DataBaseParameterTable(self)
+        self.tables = {
+            "project": self.project_table, "database": self.database_table
+        }
+
+        self.new_project_param = QPushButton(qicons.add, "New project parameter")
+        self.save_project_btn = QPushButton(qicons.save_db, "Save project parameters")
+        self.new_database_param = QPushButton(qicons.add, "New database parameter")
+        self.save_database_btn = QPushButton(qicons.save_db, "Save database parameters")
+
+        self._construct_layout()
+        self._connect_signals()
 
         self.explain_text = """
 Please see the <a href="https://docs.brightwaylca.org/intro.html#parameterized-datasets">Brightway2 documentation</a>
@@ -96,8 +108,6 @@ use the database parameter.</li>
         """ Construct the widget layout for the variable parameters tab
         """
         layout = QVBoxLayout()
-        self.project_table = ProjectParameterTable(self)
-        self.database_table = DataBaseParameterTable(self)
 
         row = QToolBar()
         row.addWidget(header("Project- and Database parameters "))
@@ -108,8 +118,6 @@ use the database parameter.</li>
         )
         add_objects_to_layout(layout, row, horizontal_line())
 
-        self.new_project_param = QPushButton(qicons.add, "New project parameter")
-        self.save_project_btn = QPushButton(qicons.save_db, "Save project parameters")
         row = QHBoxLayout()
         add_objects_to_layout(
             row, header("Project parameters:"), self.new_project_param,
@@ -118,8 +126,6 @@ use the database parameter.</li>
         row.addStretch(1)
         add_objects_to_layout(layout, row, self.project_table)
 
-        self.new_database_param = QPushButton(qicons.add, "New database parameter")
-        self.save_database_btn = QPushButton(qicons.save_db, "Save database parameters")
         row = QHBoxLayout()
         add_objects_to_layout(
             row, header("Database parameters:"), self.new_database_param,
@@ -190,9 +196,19 @@ class ProcessExchangeTab(BaseRightTab):
     """
 
     def __init__(self, parent=None):
-        self.act_table = None
-        self.exc_table = None
         super().__init__(parent)
+
+        self.save_activities_btn = QPushButton(qicons.save_db, "Save activity parameters")
+        self.save_exchanges_btn = QPushButton(qicons.save_db, "Save exchange parameters")
+        self.act_table = ActivityParameterTable(self)
+        self.exc_table = ExchangeParameterTable(self)
+        self.tables = {
+            "activity": self.act_table, "exchange": self.exc_table,
+        }
+
+        self._construct_layout()
+        self._connect_signals()
+
         # To hold variable names that can be used in the formula
         self.variable_df = None
 
@@ -233,11 +249,6 @@ amount.</li>
 
     def _construct_layout(self):
         layout = QVBoxLayout()
-        self.save_activities_btn = QPushButton(qicons.save_db, "Save activity parameters")
-        self.save_exchanges_btn = QPushButton(qicons.save_db, "Save exchange parameters")
-        self.act_table = ActivityParameterTable(self)
-        self.exc_table = ExchangeParameterTable(self)
-
         row = QToolBar()
         row.addWidget(header("Activity- and Exchange parameters "))
         row.setIconSize(QSize(24, 24))
