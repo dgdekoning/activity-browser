@@ -19,7 +19,6 @@ def test_create_project_param(qtbot):
     project_db_tab = ProjectDatabaseTab()
     qtbot.addWidget(project_db_tab)
     project_db_tab.build_dataframes()
-
     proj_table = project_db_tab.project_table
 
     with qtbot.waitSignal(proj_table.new_parameter, timeout=1000):
@@ -52,8 +51,8 @@ def test_create_database_params(qtbot):
 
     project_db_tab = ProjectDatabaseTab()
     qtbot.addWidget(project_db_tab)
-    db_table = project_db_tab.database_table
     project_db_tab.build_dataframes()
+    db_table = project_db_tab.database_table
 
     with qtbot.waitSignals([db_table.new_parameter, db_table.new_parameter], timeout=1000):
         qtbot.mouseClick(project_db_tab.new_database_param, QtCore.Qt.LeftButton)
