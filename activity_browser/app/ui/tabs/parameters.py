@@ -251,6 +251,9 @@ amount.</li>
         self.save_exchanges_btn.clicked.connect(
             lambda: self.store_parameters("exchange")
         )
+        # Connect signals from activity table to methods
+        self.act_table.reload_exchanges.connect(self.reload_exchanges)
+        self.act_table.expand_activity.connect(self.add_exchanges_action)
 
     def _construct_layout(self):
         """ Construct the widget layout for the exchanges parameters tab
