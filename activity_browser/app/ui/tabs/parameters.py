@@ -96,13 +96,17 @@ use the database parameter.</li>
     def _connect_signals(self):
         signals.project_selected.connect(self.build_dataframes)
         self.new_project_param.clicked.connect(
-            self.project_table.add_parameter
+            lambda: self.add_parameter("project")
         )
         self.new_database_param.clicked.connect(
-            self.database_table.add_parameter
+            lambda: self.add_parameter("database")
         )
-        self.save_project_btn.clicked.connect(self.store_project_parameters)
-        self.save_database_btn.clicked.connect(self.store_database_parameters)
+        self.save_project_btn.clicked.connect(
+            lambda: self.store_parameters("project")
+        )
+        self.save_database_btn.clicked.connect(
+            lambda: self.store_parameters("database")
+        )
 
     def _construct_layout(self):
         """ Construct the widget layout for the variable parameters tab
@@ -142,33 +146,31 @@ use the database parameter.</li>
         self.project_table.sync(ProjectParameterTable.build_parameter_df())
         self.database_table.sync(DataBaseParameterTable.build_parameter_df())
 
-    @pyqtSlot()
-    def store_project_parameters(self) -> None:
-        """ Store project parameters
+    @pyqtSlot(str)
+    def add_parameter(self, name: str) -> None:
+        """ Generic method for adding a single parameter to the given table
         """
-        error = self.project_table.save_parameters()
-        if not error:
-            self.project_table.sync(ProjectParameterTable.build_parameter_df())
-        else:
-            self.handle_error(error)
+        table = self.tables.get(name, None)
+        if not table:
+            return
+        table.add_parameter()
 
-    @pyqtSlot()
-    def store_database_parameters(self) -> None:
-        """ Store database parameters
+    @pyqtSlot(str)
+    def store_parameters(self, name: str) -> None:
+        """ Store new / edited data, include handling for exceptions
         """
-        error = self.database_table.save_parameters()
-        if not error:
-            self.database_table.sync(DataBaseParameterTable.build_parameter_df())
-        else:
-            self.handle_error(error)
+        table = self.tables.get(name, None)
+        if not table:
+            return
 
-    def handle_error(self, exception: int) -> None:
-        """ If saving parameters failed, allow user to determine next step
-        """
-        if exception == QMessageBox.Discard:
+        error = table.save_parameters()
+        if not error:
+            table.sync(table.build_parameter_df())
+            return
+        elif error == QMessageBox.Discard:
             # Tables are rebuilt and ALL changes are reverted
             self.build_dataframes()
-        if exception == QMessageBox.Cancel:
+        elif error == QMessageBox.Cancel:
             # Nothing is done, errors remain, tables are not rebuilt
             return
 
@@ -244,10 +246,16 @@ amount.</li>
 
     def _connect_signals(self):
         signals.project_selected.connect(self.build_dataframes)
-        self.save_activities_btn.clicked.connect(self.store_activity_parameters)
-        self.save_exchanges_btn.clicked.connect(self.store_exchange_parameters)
+        self.save_activities_btn.clicked.connect(
+            lambda: self.store_parameters("activity")
+        )
+        self.save_exchanges_btn.clicked.connect(
+            lambda: self.store_parameters("exchange")
+        )
 
     def _construct_layout(self):
+        """ Construct the widget layout for the exchanges parameters tab
+        """
         layout = QVBoxLayout()
         row = QToolBar()
         row.addWidget(header("Activity- and Exchange parameters "))
@@ -293,32 +301,21 @@ amount.</li>
         """
         self.exc_table.sync(ExchangeParameterTable.build_parameter_df())
 
-    @pyqtSlot()
-    def store_activity_parameters(self) -> None:
-        """ Store activity parameters
+    @pyqtSlot(str)
+    def store_parameters(self, name: str) -> None:
+        """ Store new / edited data, include handling for exceptions
         """
-        error = self.act_table.save_parameters()
-        if not error:
-            self.act_table.sync(ActivityParameterTable.build_parameter_df())
-        else:
-            self.handle_error(error)
+        table = self.tables.get(name, None)
+        if not table:
+            return
 
-    @pyqtSlot()
-    def store_exchange_parameters(self) -> None:
-        """ Store exchange parameters
-        """
-        error = self.exc_table.save_parameters()
+        error = table.save_parameters()
         if not error:
-            self.exc_table.sync(ExchangeParameterTable.build_parameter_df())
-        else:
-            self.handle_error(error)
-
-    def handle_error(self, exception: int) -> None:
-        """ If saving parameters failed, allow user to determine next step
-        """
-        if exception == QMessageBox.Discard:
+            table.sync(table.build_parameter_df())
+            return
+        elif error == QMessageBox.Discard:
             # Tables are rebuilt and ALL changes are reverted
             self.build_dataframes()
-        if exception == QMessageBox.Cancel:
+        elif error == QMessageBox.Cancel:
             # Nothing is done, errors remain, tables are not rebuilt
             return
