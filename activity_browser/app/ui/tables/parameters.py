@@ -19,7 +19,7 @@ from ..widgets import parameter_save_errorbox, simple_warning_box
 from .delegates import (DatabaseDelegate, FloatDelegate, ListDelegate,
                         StringDelegate, ViewOnlyDelegate)
 from .inventory import ActivitiesBiosphereTable
-from .views import ABDataFrameEdit
+from .views import ABDataFrameEdit, ABDataFrameSimpleCopy
 
 
 class BaseParameterTable(ABDataFrameEdit):
@@ -148,6 +148,39 @@ class DataBaseParameterTable(BaseParameterTable):
                 signals.parameters_changed.emit()
             except Exception as e:
                 return parameter_save_errorbox(self, e)
+
+
+class ViewOnlyParameterTable(ABDataFrameSimpleCopy):
+    """ Show a combination of Project and Database parameter names
+    """
+    COLUMNS = ["parameter", "name"]
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    @ABDataFrameSimpleCopy.decorated_sync
+    def sync(self, df):
+        self.dataframe = df
+
+    @classmethod
+    def build_parameter_df(cls):
+        """ Build a listview of existing
+        """
+        project_variables = [
+            {"parameter": "project", "name": getattr(p, "name")}
+            for p in ProjectParameter.select()
+        ]
+        database_variables = [
+            {
+                "parameter": "database:{}".format(getattr(p, "database")),
+                "name": "{}".format(getattr(p, "name"))
+            }
+            for p in DatabaseParameter.select()
+        ]
+        df = pd.DataFrame(
+            project_variables + database_variables, columns=cls.COLUMNS
+        )
+        return df
 
 
 class ActivityParameterTable(BaseParameterTable):
