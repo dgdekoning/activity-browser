@@ -257,6 +257,7 @@ amount.</li>
             lambda: self.exc_table.sync(self.exc_table.build_parameter_df())
         )
         self.act_table.expand_activity.connect(self.exc_table.extend_exchange_df)
+        self.act_table.parameter_removed.connect(self.exc_table.clear_linked_parameters)
         # Reload the variables table, used if user adds new project/db params
         self.reload_variables_btn.clicked.connect(
             lambda: self.variable_table.sync(self.variable_table.build_parameter_df())
