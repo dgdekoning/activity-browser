@@ -499,6 +499,7 @@ class ExchangeParameterTable(BaseParameterTable):
                   .sort_values(by=["group", "name"]))
         return result
 
+    @pyqtSlot(tuple)
     def extend_exchange_df(self, key: tuple) -> Optional[int]:
         """ Update the owned dataframe with exchanges from the given activity
         key
@@ -573,6 +574,7 @@ class ExchangeParameterTable(BaseParameterTable):
         signals.parameters_changed.emit()
         self.sync(self.dataframe)
 
+    @pyqtSlot()
     def delete_parameters(self) -> None:
         """ Removes formula(s) from the selected exchange(s)
         """
