@@ -70,4 +70,4 @@ def test_create_database_params(qtbot):
 
     assert DatabaseParameter.select().count() == 2
     # 2.5 + 3.5 = 6 -> 6 ** 2 = 36
-    assert DatabaseParameter.get(database="biosphere3", name="test_db2").amount == 36
+    assert DatabaseParameter.get(name="test_db2").amount == 36
