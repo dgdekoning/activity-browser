@@ -12,6 +12,66 @@ from .models import (DragPandasModel, EditableDragPandasModel,
                      SimpleCopyDragPandasModel)
 
 
+def view_sync(sync):
+    """ Syncs dataframe data into view-only models
+
+    Uses either the PandasModel or the DragPandasModel class
+    """
+    @wraps(sync)
+    def wrapper(self, *args, **kwargs):
+        sync(self, *args, **kwargs)
+        if hasattr(self, 'drag_model'):
+            self.model = DragPandasModel(self.dataframe)
+        else:
+            self.model = PandasModel(self.dataframe)
+        # see: http://doc.qt.io/qt-5/qsortfilterproxymodel.html#details
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.setModel(self.proxy_model)
+        self.setMaximumHeight(self.get_max_height())
+    return wrapper
+
+
+def copy_sync(sync):
+    """ Syncs the data from the dataframe into models allowing simple copying.
+    """
+    @wraps(sync)
+    def wrapper(self, *args, **kwargs):
+        sync(self, *args, **kwargs)
+        if hasattr(self, 'drag_model'):
+            self.model = SimpleCopyDragPandasModel(self.dataframe)
+        else:
+            self.model = SimpleCopyPandasModel(self.dataframe)
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.setModel(self.proxy_model)
+        self.setMaximumHeight(self.get_max_height())
+        self.resizeColumnsToContents()
+    return wrapper
+
+
+def edit_sync(sync):
+    """ Syncs dataframe data into models allowing editing.
+    """
+    @wraps(sync)
+    def wrapper(self, *args, **kwargs):
+        sync(self, *args, **kwargs)
+        if hasattr(self, 'drag_model'):
+            self.model = EditableDragPandasModel(self.dataframe)
+        else:
+            self.model = EditablePandasModel(self.dataframe)
+        self.proxy_model = QSortFilterProxyModel()
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
+        self.setModel(self.proxy_model)
+        self.setMaximumHeight(self.get_max_height())
+        self.resizeColumnsToContents()
+        self.resizeRowsToContents()
+    return wrapper
+
+
 class ABDataFrameView(QTableView):
     """ Base class for showing pandas dataframe objects.
     """
@@ -44,29 +104,6 @@ class ABDataFrameView(QTableView):
         """ Tests if dataframe of the view has data
         """
         return len(self.dataframe.index) > 0
-
-    @staticmethod
-    def decorated_sync(sync):
-        """ Syncs the data from the dataframe into the table view.
-
-        Uses either of the PandasModel classes depending if the class is
-        'drag-enabled'.
-        """
-        @wraps(sync)
-        def wrapper(self, *args, **kwargs):
-            sync(self, *args, **kwargs)
-
-            if hasattr(self, 'drag_model'):
-                self.model = DragPandasModel(self.dataframe)
-            else:
-                self.model = PandasModel(self.dataframe)
-            self.proxy_model = QSortFilterProxyModel()  # see: http://doc.qt.io/qt-5/qsortfilterproxymodel.html#details
-            self.proxy_model.setSourceModel(self.model)
-            self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
-            self.setModel(self.proxy_model)
-            self.setMaximumHeight(self.get_max_height())
-
-        return wrapper
 
     @staticmethod
     def get_source_index(proxy_index):
@@ -131,58 +168,3 @@ class ABDataFrameView(QTableView):
                 rows = sorted(set(rows), key=rows.index)
                 columns = sorted(set(columns), key=columns.index)
                 self.model.to_clipboard(rows, columns)
-
-
-class ABDataFrameSimpleCopy(ABDataFrameView):
-    """ A view-only class which copies values without including headers
-    """
-    @staticmethod
-    def decorated_sync(sync):
-        @wraps(sync)
-        def wrapper(self, *args, **kwargs):
-            sync(self, *args, **kwargs)
-
-            if hasattr(self, 'drag_model'):
-                self.model = SimpleCopyDragPandasModel(self.dataframe)
-            else:
-                self.model = SimpleCopyPandasModel(self.dataframe)
-            self.proxy_model = QSortFilterProxyModel()  # see: http://doc.qt.io/qt-5/qsortfilterproxymodel.html#details
-            self.proxy_model.setSourceModel(self.model)
-            self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
-            self.setModel(self.proxy_model)
-            self.setMaximumHeight(self.get_max_height())
-            self.resizeColumnsToContents()
-
-        return wrapper
-
-
-class ABDataFrameEdit(ABDataFrameView):
-    """ Inherit from view class but override decorated_sync to use
-    editable models
-    """
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    @staticmethod
-    def decorated_sync(sync):
-        """ Syncs the data from the dataframe into the table view.
-
-        Uses either of the PandasModel classes depending if the class is
-        'drag-enabled'.
-        """
-        @wraps(sync)
-        def wrapper(self, *args, **kwargs):
-            sync(self, *args, **kwargs)
-            if hasattr(self, 'drag_model'):
-                self.model = EditableDragPandasModel(self.dataframe)
-            else:
-                self.model = EditablePandasModel(self.dataframe)
-            self.proxy_model = QSortFilterProxyModel()  # see: http://doc.qt.io/qt-5/qsortfilterproxymodel.html#details
-            self.proxy_model.setSourceModel(self.model)
-            self.proxy_model.setSortCaseSensitivity(Qt.CaseInsensitive)
-            self.setModel(self.proxy_model)
-            self.setMaximumHeight(self.get_max_height())
-            self.resizeColumnsToContents()
-            self.resizeRowsToContents()
-
-        return wrapper

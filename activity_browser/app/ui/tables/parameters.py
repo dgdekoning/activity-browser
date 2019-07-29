@@ -19,13 +19,13 @@ from ..widgets import parameter_save_errorbox, simple_warning_box
 from .delegates import (DatabaseDelegate, FloatDelegate, ListDelegate,
                         StringDelegate, ViewOnlyDelegate)
 from .inventory import ActivitiesBiosphereTable
-from .views import ABDataFrameEdit, ABDataFrameSimpleCopy
+from .views import ABDataFrameView, copy_sync, edit_sync
 
 
-class BaseParameterTable(ABDataFrameEdit):
+class BaseParameterTable(ABDataFrameView):
     new_parameter = pyqtSignal()
 
-    @ABDataFrameEdit.decorated_sync
+    @edit_sync
     def sync(self, df):
         self.dataframe = df
 
@@ -150,7 +150,7 @@ class DataBaseParameterTable(BaseParameterTable):
                 return parameter_save_errorbox(self, e)
 
 
-class ViewOnlyParameterTable(ABDataFrameSimpleCopy):
+class ViewOnlyParameterTable(ABDataFrameView):
     """ Show a combination of Project and Database parameter names
     """
     COLUMNS = ["parameter", "name"]
@@ -158,7 +158,7 @@ class ViewOnlyParameterTable(ABDataFrameSimpleCopy):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    @ABDataFrameSimpleCopy.decorated_sync
+    @copy_sync
     def sync(self, df):
         self.dataframe = df
 
