@@ -104,10 +104,9 @@ class ProjectParameterTable(BaseParameterTable):
         NOTE: Any new parameters are only stored in memory until
         `save_project_parameters` is called in the tab
         """
-        self.dataframe = self.dataframe.append(
-            {"name": None, "amount": 0.0, "formula": ""},
-            ignore_index=True
-        )
+        row = {"name": None, "amount": 0.0, "formula": ""}
+        row.update({key: None for key in self.UNCERTAINTY})
+        self.dataframe = self.dataframe.append(row, ignore_index=True)
         self.sync(self.dataframe)
         self.new_parameter.emit()
 
@@ -166,10 +165,9 @@ class DataBaseParameterTable(BaseParameterTable):
         NOTE: Any new parameters are only stored in memory until
         `save_project_parameters` is called
         """
-        self.dataframe = self.dataframe.append(
-            {"database": None, "name": None, "amount": 0.0, "formula": ""},
-            ignore_index=True
-        )
+        row = {"database": None, "name": None, "amount": 0.0, "formula": ""}
+        row.update({key: None for key in self.UNCERTAINTY})
+        self.dataframe = self.dataframe.append(row, ignore_index=True)
         self.sync(self.dataframe)
         self.new_parameter.emit()
 
@@ -318,6 +316,7 @@ class ActivityParameterTable(BaseParameterTable):
             row = {key: act.get(key, "") for key in self.COLUMNS}
             if row["amount"] == "":
                 row["amount"] = 0.0
+            row.update({key: None for key in self.UNCERTAINTY})
             self.dataframe = self.dataframe.append(
                 row, ignore_index=True
             )
