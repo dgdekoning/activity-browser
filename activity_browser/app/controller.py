@@ -8,9 +8,9 @@ from PyQt5 import QtWidgets
 from bw2data.backends.peewee import Exchange, sqlite3_lci_db
 from bw2data.project import ProjectDataset, SubstitutableDatabase
 
-from activity_browser.app.ui.wizards.db_import_wizard import (
-    DatabaseImportWizard, DefaultBiosphereDialog, CopyDatabaseDialog
-)
+from activity_browser.app.ui.wizards import (CopyDatabaseDialog,
+                                             DatabaseImportWizard,
+                                             DefaultBiosphereDialog)
 from .settings import ab_settings, project_settings
 from .signals import signals
 
