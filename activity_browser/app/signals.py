@@ -55,6 +55,7 @@ class Signals(QtCore.QObject):
     exchanges_deleted = QtCore.pyqtSignal(list)
     exchanges_add = QtCore.pyqtSignal(list, tuple)
     exchange_amount_modified = QtCore.pyqtSignal(object, float)
+    exchange_modified = QtCore.pyqtSignal(object, str, object)
 
     # Parameters
     add_activity_parameter = QtCore.pyqtSignal(tuple)
