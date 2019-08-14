@@ -99,26 +99,26 @@ class ExchangeTable(ABTableWidget):
             self.sync()
 
     def filter_change(self, row, col):
+        item = self.item(row, col)
+        if self.ignore_changes:  # todo: check or remove
+            return
+        elif item.text() == item.previous:
+            return
+
         try:
-            item = self.item(row, col)
-            if self.ignore_changes:  # todo: check or remove
-                return
-            elif item.text() == item.previous:
-                return
-            else:
-                print("row:", row)
-                if col == 0:  # expect number todo: improve substantially!
-                    value = float(item.text())
-                    item.previous = item.text()
-                    exchange = item.exchange
-                    signals.exchange_amount_modified.emit(exchange, value)
-                else:  # exepct string
-                    fields = {1: "unit", 2: "reference product"}
-                    print("here 2")
-                    act = item.exchange.output.key
-                    value = str(item.text())
-                    item.previous = item.text()
-                    signals.activity_modified.emit(act, fields[col], value)
+            print("row:", row)
+            if col == 0:  # expect number todo: improve substantially!
+                value = float(item.text())
+                item.previous = item.text()
+                exchange = item.exchange
+                signals.exchange_amount_modified.emit(exchange, value)
+            else:  # exepct string
+                fields = {1: "unit", 2: "reference product"}
+                print("here 2")
+                act = item.exchange.output.key
+                value = str(item.text())
+                item.previous = item.text()
+                signals.activity_modified.emit(act, fields[col], value)
         except ValueError:
             print('You can only enter numbers here.')
             item.setText(item.previous)
