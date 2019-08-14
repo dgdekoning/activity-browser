@@ -111,7 +111,7 @@ class ExchangeTable(ABTableWidget):
                 value = float(item.text())
                 item.previous = item.text()
                 exchange = item.exchange
-                signals.exchange_amount_modified.emit(exchange, value)
+                signals.exchange_modified.emit(exchange, "amount", value)
             else:  # exepct string
                 fields = {1: "unit", 2: "reference product"}
                 print("here 2")
