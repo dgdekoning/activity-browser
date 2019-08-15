@@ -475,5 +475,10 @@ class Controller(object):
     @pyqtSlot(object, str, object)
     def modify_exchange(exchange, field, value):
         exchange[field] = value
+        # Never, ever, store an empty string in the formula field.
+        if field == "formula" and value == "" and "formula" in exchange:
+            del exchange[field]
         exchange.save()
+        if field == "formula":
+            signals.exchange_formula_changed.emit(exchange["output"])
         signals.database_changed.emit(exchange['output'][0])

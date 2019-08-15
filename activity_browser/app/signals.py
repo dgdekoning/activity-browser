@@ -60,6 +60,8 @@ class Signals(QtCore.QObject):
     # Parameters
     add_activity_parameter = QtCore.pyqtSignal(tuple)
     parameters_changed = QtCore.pyqtSignal()
+    # Pass the key of the activity holding the exchange
+    exchange_formula_changed = QtCore.pyqtSignal(tuple)
 
     # Calculation Setups
     new_calculation_setup = QtCore.pyqtSignal()
