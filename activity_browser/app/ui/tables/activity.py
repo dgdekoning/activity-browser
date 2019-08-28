@@ -2,7 +2,8 @@
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .delegates import FloatDelegate, StringDelegate, ViewOnlyDelegate
+from .delegates import (FloatDelegate, FormulaDelegate, StringDelegate,
+                        ViewOnlyDelegate)
 from .views import ABDataFrameEdit, dataframe_sync
 from ..icons import qicons
 from ...signals import signals
@@ -219,7 +220,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         self.setItemDelegateForColumn(4, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(6, ViewOnlyDelegate(self))
-        self.setItemDelegateForColumn(7, StringDelegate(self))
+        self.setItemDelegateForColumn(7, FormulaDelegate(self))
         self.setDragDropMode(QtWidgets.QTableView.DragDrop)
         self.table_name = "technosphere"
         self.drag_model = True

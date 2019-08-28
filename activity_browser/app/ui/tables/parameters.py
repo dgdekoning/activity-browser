@@ -15,8 +15,9 @@ from activity_browser.app.signals import signals
 
 from ..icons import qicons
 from ..widgets import parameter_save_errorbox, simple_warning_box
-from .delegates import (DatabaseDelegate, FloatDelegate, ListDelegate,
-                        StringDelegate, UncertaintyDelegate, ViewOnlyDelegate)
+from .delegates import (DatabaseDelegate, FloatDelegate, FormulaDelegate,
+                        ListDelegate, StringDelegate, UncertaintyDelegate,
+                        ViewOnlyDelegate)
 from .inventory import ActivitiesBiosphereTable
 from .models import ParameterTreeModel
 from .views import (ABDataFrameEdit, ABDictTreeView, dataframe_sync,
@@ -73,6 +74,12 @@ class BaseParameterTable(ABDataFrameEdit):
         """
         raise NotImplementedError
 
+    def get_usable_parameters(self) -> list:
+        """ Builds a simple list of parameters that can be used in `this`
+        table for use in delegates
+        """
+        raise NotImplementedError
+
 
 class ProjectParameterTable(BaseParameterTable):
     """ Table widget for project parameters
@@ -88,11 +95,12 @@ class ProjectParameterTable(BaseParameterTable):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.table_name = "project_parameter"
 
         # Set delegates for specific columns
         self.setItemDelegateForColumn(0, StringDelegate(self))
         self.setItemDelegateForColumn(1, FloatDelegate(self))
-        self.setItemDelegateForColumn(2, StringDelegate(self))
+        self.setItemDelegateForColumn(2, FormulaDelegate(self))
         self.setItemDelegateForColumn(3, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(4, FloatDelegate(self))
         self.setItemDelegateForColumn(5, FloatDelegate(self))
@@ -140,6 +148,12 @@ class ProjectParameterTable(BaseParameterTable):
         for i in range(3, 9):
             self.setColumnHidden(i, not show)
 
+    def get_usable_parameters(self) -> list:
+        return [
+            [p.name, p.amount, p.formula]
+            for p in ProjectParameter.select().iterator()
+        ]
+
 
 class DataBaseParameterTable(BaseParameterTable):
     """ Table widget for database parameters
@@ -152,12 +166,13 @@ class DataBaseParameterTable(BaseParameterTable):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.table_name = "database_parameter"
 
         # Set delegates for specific columns
         self.setItemDelegateForColumn(0, DatabaseDelegate(self))
         self.setItemDelegateForColumn(1, StringDelegate(self))
         self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, StringDelegate(self))
+        self.setItemDelegateForColumn(3, FormulaDelegate(self))
         self.setItemDelegateForColumn(4, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(5, FloatDelegate(self))
         self.setItemDelegateForColumn(6, FloatDelegate(self))
@@ -209,6 +224,12 @@ class DataBaseParameterTable(BaseParameterTable):
         for i in range(4, 10):
             self.setColumnHidden(i, not show)
 
+    def get_usable_parameters(self) -> list:
+        return [
+            [p.name, p.amount, p.formula]
+            for p in ProjectParameter.select().iterator()
+        ]
+
 
 class ActivityParameterTable(BaseParameterTable):
     """ Table widget for activity parameters
@@ -225,7 +246,7 @@ class ActivityParameterTable(BaseParameterTable):
         self.setItemDelegateForColumn(0, StringDelegate(self))
         self.setItemDelegateForColumn(1, StringDelegate(self))
         self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, StringDelegate(self))
+        self.setItemDelegateForColumn(3, FormulaDelegate(self))
         self.setItemDelegateForColumn(4, ListDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(6, UncertaintyDelegate(self))
@@ -499,6 +520,12 @@ class ActivityParameterTable(BaseParameterTable):
             param.group for param in ActivityParameter.select()
             if param.group not in ignore_groups
         ]))
+
+    def get_usable_parameters(self) -> list:
+        return [
+            [p.name, p.amount, p.formula]
+            for p in ProjectParameter.select().iterator()
+        ]
 
 
 class ExchangesTable(ABDictTreeView):
