@@ -74,7 +74,8 @@ class BaseParameterTable(ABDataFrameEdit):
         """
         raise NotImplementedError
 
-    def get_usable_parameters(self) -> list:
+    @staticmethod
+    def get_usable_parameters() -> list:
         """ Builds a simple list of parameters that can be used in `this`
         table for use in delegates
         """
@@ -148,10 +149,11 @@ class ProjectParameterTable(BaseParameterTable):
         for i in range(3, 9):
             self.setColumnHidden(i, not show)
 
-    def get_usable_parameters(self) -> list:
+    @staticmethod
+    def get_usable_parameters() -> list:
         return [
-            [p.name, p.amount, p.formula]
-            for p in ProjectParameter.select().iterator()
+            [p.name, p.amount, "project"]
+            for p in ProjectParameter.select()
         ]
 
 
@@ -224,10 +226,12 @@ class DataBaseParameterTable(BaseParameterTable):
         for i in range(4, 10):
             self.setColumnHidden(i, not show)
 
-    def get_usable_parameters(self) -> list:
-        return [
-            [p.name, p.amount, p.formula]
-            for p in ProjectParameter.select().iterator()
+    @staticmethod
+    def get_usable_parameters() -> list:
+        project = ProjectParameterTable.get_usable_parameters()
+        return project + [
+            [p.name, p.amount, "database ({})".format(p.database)]
+            for p in DatabaseParameter.select()
         ]
 
 
@@ -399,7 +403,7 @@ class ActivityParameterTable(BaseParameterTable):
         menu.addAction(
             qicons.delete, "Remove order from group(s)", self.unset_group_order
         )
-        menu.popup(QCursor.pos())
+        menu.popup(event.globalPos())
         menu.exec()
 
     @pyqtSlot()
@@ -521,10 +525,13 @@ class ActivityParameterTable(BaseParameterTable):
             if param.group not in ignore_groups
         ]))
 
-    def get_usable_parameters(self) -> list:
-        return [
-            [p.name, p.amount, p.formula]
-            for p in ProjectParameter.select().iterator()
+    @staticmethod
+    def get_usable_parameters() -> list:
+        project = ProjectParameterTable.get_usable_parameters()
+        database = DataBaseParameterTable.get_usable_parameters()
+        return project + database + [
+            [p.name, p.amount, "activity ({})".format(p.group)]
+            for p in ActivityParameter.select()
         ]
 
 
