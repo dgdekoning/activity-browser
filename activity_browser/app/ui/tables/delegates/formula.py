@@ -76,8 +76,9 @@ class FormulaDelegate(QStyledItemDelegate):
     the delegate dialog itself. Requiring us to also include refreshing
     for the parameter list.
     """
-    PARAMETER_TABLES = {"project_parameter", "database_parameter",
-                        "activity_parameter"}
+    ACCEPTED_TABLES = {"project_parameter", "database_parameter",
+                       "activity_parameter", "product", "technosphere",
+                       "biosphere"}
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -92,11 +93,12 @@ class FormulaDelegate(QStyledItemDelegate):
         """ Populate the editor with data if editing an existing field.
         """
         dialog = editor.findChild(FormulaDialog)
-        value = str(index.data(Qt.DisplayRole))
+        data = index.data(Qt.DisplayRole)
+        value = "" if data is None else str(data)
 
         parent = self.parent()
         # Check which table is asking for a list
-        if getattr(parent, "table_name", "") in self.PARAMETER_TABLES:
+        if getattr(parent, "table_name", "") in self.ACCEPTED_TABLES:
             items = parent.get_usable_parameters()
             dialog.insert_parameters(items)
             dialog.set_formula(value)
