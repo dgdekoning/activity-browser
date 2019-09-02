@@ -3,9 +3,9 @@ from typing import Optional
 
 from PyQt5.QtCore import QAbstractItemModel, QModelIndex, Qt
 from PyQt5.QtGui import QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import (QDialog, QGridLayout,QStyledItemDelegate,
-                             QDialogButtonBox, QListView, QPlainTextEdit,
-                             QPushButton, QSizePolicy, QWidget)
+from PyQt5.QtWidgets import (QDialog, QGridLayout, QStyledItemDelegate,
+                             QDialogButtonBox, QPlainTextEdit, QPushButton,
+                             QSizePolicy, QTableView, QWidget)
 
 from ...icons import qicons
 
@@ -19,12 +19,11 @@ class FormulaDialog(QDialog):
         grid = QGridLayout(self)
         self.text_field = QPlainTextEdit(self)
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        # the below shit does fuck all, why even bother.
         buttons.setSizePolicy(
             QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred, QSizePolicy.ButtonBox)
         )
-        self.parameters = QListView(self)
-        model = QStandardItemModel(0, 3)
+        self.parameters = QTableView(self)
+        model = QStandardItemModel(self)
         self.parameters.setModel(model)
         self.new_parameter = QPushButton(
             qicons.add, "New parameter", self
@@ -40,20 +39,29 @@ class FormulaDialog(QDialog):
         self.show()
 
     def insert_parameters(self, items: list) -> None:
+        """ Take the given list of parameter names, amounts and types, insert
+        them into the model.
+        """
         model = self.parameters.model()
         model.clear()
-        for item in items:
-            print(item)
-            row = [QStandardItem(str(item[i])) for i in range(model.columnCount())]
-            model.appendRow(row)
-        self.parameters.setModel(model)
+        model.setHorizontalHeaderLabels(["Name", "Amount", "Type"])
+        for x, item in enumerate(items):
+            for y, value in enumerate(item):
+                model_item = QStandardItem(str(value))
+                model_item.setEditable(False)
+                model.setItem(x, y, model_item)
+        self.parameters.resizeColumnsToContents()
+
+    def set_formula(self, value: str) -> None:
+        """ Take the formula and set it to the text_field widget.
+        """
+        self.text_field.setPlainText(value)
 
     def get_formula(self) -> Optional[str]:
         """ Look into the text_field, validate formula and return it.
         """
-        if self.text_field.toPlainText() == "":
-            return
-        print(f"Found text: '{self.text_field.text()}'")
+        value = self.text_field.toPlainText()
+        return value if value != "" else None
 
 
 class FormulaDelegate(QStyledItemDelegate):
@@ -68,6 +76,9 @@ class FormulaDelegate(QStyledItemDelegate):
     the delegate dialog itself. Requiring us to also include refreshing
     for the parameter list.
     """
+    PARAMETER_TABLES = {"project_parameter", "database_parameter",
+                        "activity_parameter"}
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -84,16 +95,11 @@ class FormulaDelegate(QStyledItemDelegate):
         value = str(index.data(Qt.DisplayRole))
 
         parent = self.parent()
-        print(f"Parent is {parent} of type {type(parent)}")
-        print(f"Parent has table_name: {getattr(parent, 'table_name')}")
-
         # Check which table is asking for a list
-        if getattr(parent, "table_name", "") in {"project_parameter",
-                                                 "database_parameter",
-                                                 "activity_parameter"}:
+        if getattr(parent, "table_name", "") in self.PARAMETER_TABLES:
             items = parent.get_usable_parameters()
-            print(items)
             dialog.insert_parameters(items)
+            dialog.set_formula(value)
 
     def setModelData(self, editor: QWidget, model: QAbstractItemModel,
                      index: QModelIndex):
