@@ -243,9 +243,8 @@ class ProductExchangeTable(BaseExchangeTable):
         technosphere exchanges table.
         """
         source = event.source()
-        if hasattr(source, "table_name") and source.table_name == "technosphere":
-            event.accept()
-        elif hasattr(source, "technosphere") and source.technosphere is True:
+        if (getattr(source, "table_name", "") == "technosphere" or
+                getattr(source, "technosphere", False) is True):
             event.accept()
 
 
@@ -291,9 +290,8 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         downstream exchanges table.
         """
         source = event.source()
-        if isinstance(source, DownstreamExchangeTable):
-            event.accept()
-        elif hasattr(source, "technosphere") and source.technosphere is True:
+        if (getattr(source, "table_name", "") == "downstream" or
+                getattr(source, "technosphere", False) is True):
             event.accept()
 
 
@@ -332,8 +330,7 @@ class BiosphereExchangeTable(BaseExchangeTable):
     def dragEnterEvent(self, event):
         """ Only accept exchanges from a technosphere database table
         """
-        source = event.source()
-        if hasattr(source, "technosphere") and source.technosphere is False:
+        if getattr(event.source(), "technosphere", True) is False:
             event.accept()
 
 
