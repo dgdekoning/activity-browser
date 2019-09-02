@@ -36,6 +36,7 @@ class BaseExchangeTable(ABDataFrameEdit):
         self.downstream = False
         self.key = None if not hasattr(parent, "key") else parent.key
         self.exchanges = []
+        self.exchange_index = 0
         self._connect_signals()
 
     def _connect_signals(self):
@@ -56,9 +57,11 @@ class BaseExchangeTable(ABDataFrameEdit):
 
         Make sure to store the Exchange object itself in the dataframe as well.
         """
+        columns = self.COLUMNS + ["exchange"]
         df = pd.DataFrame([
             self.create_row(exchange=exc)[0] for exc in self.exchanges
-        ], columns=self.COLUMNS + ["exchange"])
+        ], columns=columns)
+        self.exchange_index = columns.index("exchange")
         return df
 
     def create_row(self, exchange) -> (dict, object):
@@ -73,18 +76,24 @@ class BaseExchangeTable(ABDataFrameEdit):
         return row, adj_act
 
     def get_key(self, proxy: QtCore.QModelIndex) -> tuple:
-        """ Get the activity key from the exchange. """
+        """ Get the activity key from an exchange.
+
+        This is done by reaching into the table model through the proxy model
+        """
         index = self.get_source_index(proxy)
-        exchange = self.dataframe.iloc[index.row(), ]["exchange"]
-        return exchange.output if self.downstream else exchange.input
+        exchange = self.model.index(index.row(), self.exchange_index).data()
+        act = exchange.output if self.downstream else exchange.input
+        return act.key
 
     @QtCore.pyqtSlot()
     def delete_exchanges(self) -> None:
         """ Remove all of the selected exchanges from the activity.
         """
         indexes = [self.get_source_index(p) for p in self.selectedIndexes()]
-        rows = [index.row() for index in indexes]
-        exchanges = self.dataframe.iloc[rows, ]["exchange"].to_list()
+        exchanges = [
+            self.model.index(index.row(), self.exchange_index).data()
+            for index in indexes
+        ]
         signals.exchanges_deleted.emit(exchanges)
 
     def remove_formula(self) -> None:
@@ -98,8 +107,11 @@ class BaseExchangeTable(ABDataFrameEdit):
         if it was set for the current activity and all formulas are gone.
         """
         indexes = [self.get_source_index(p) for p in self.selectedIndexes()]
-        rows = [index.row() for index in indexes]
-        for exchange in self.dataframe.iloc[rows, ]["exchange"]:
+        exchanges = [
+            self.model.index(index.row(), self.exchange_index).data()
+            for index in indexes
+        ]
+        for exchange in exchanges:
             signals.exchange_modified.emit(exchange, "formula", "")
 
     def contextMenuEvent(self, a0) -> None:
@@ -120,8 +132,10 @@ class BaseExchangeTable(ABDataFrameEdit):
         # A single cell was edited.
         if topLeft == bottomRight:
             index = self.get_source_index(topLeft)
-            field = AB_names_to_bw_keys[self.dataframe.columns[index.column()]]
-            exchange = self.dataframe.iloc[index.row(), ]["exchange"]
+            field = AB_names_to_bw_keys.get(
+                self.model.headerData(index.column(), QtCore.Qt.Horizontal)
+            )
+            exchange = self.model.index(index.row(), self.exchange_index).data()
             if field in {"amount", "formula"}:
                 if field == "amount":
                     value = float(topLeft.data())
@@ -166,9 +180,7 @@ class BaseExchangeTable(ABDataFrameEdit):
             return
 
         # Grab the activity key from the exchange and open a tab
-        index = self.get_source_index(proxy)
-        row = self.dataframe.iloc[index.row(), ]
-        key = row["exchange"]["output"] if self.downstream else row["exchange"]["input"]
+        key = self.get_key(proxy)
         signals.open_activity_tab.emit(key)
         signals.add_activity_to_history.emit(key)
 
