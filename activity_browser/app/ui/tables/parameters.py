@@ -15,8 +15,9 @@ from activity_browser.app.signals import signals
 
 from ..icons import qicons
 from ..widgets import parameter_save_errorbox, simple_warning_box
-from .delegates import (DatabaseDelegate, FloatDelegate, ListDelegate,
-                        StringDelegate, UncertaintyDelegate, ViewOnlyDelegate)
+from .delegates import (DatabaseDelegate, FloatDelegate, FormulaDelegate,
+                        ListDelegate, StringDelegate, UncertaintyDelegate,
+                        ViewOnlyDelegate)
 from .inventory import ActivitiesBiosphereTable
 from .models import ParameterTreeModel
 from .views import (ABDataFrameEdit, ABDictTreeView, dataframe_sync,
@@ -95,11 +96,12 @@ class ProjectParameterTable(BaseParameterTable):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.table_name = "project_parameter"
 
         # Set delegates for specific columns
         self.setItemDelegateForColumn(0, StringDelegate(self))
         self.setItemDelegateForColumn(1, FloatDelegate(self))
-        self.setItemDelegateForColumn(2, StringDelegate(self))
+        self.setItemDelegateForColumn(2, FormulaDelegate(self))
         self.setItemDelegateForColumn(3, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(4, FloatDelegate(self))
         self.setItemDelegateForColumn(5, FloatDelegate(self))
@@ -165,12 +167,13 @@ class DataBaseParameterTable(BaseParameterTable):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.table_name = "database_parameter"
 
         # Set delegates for specific columns
         self.setItemDelegateForColumn(0, DatabaseDelegate(self))
         self.setItemDelegateForColumn(1, StringDelegate(self))
         self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, StringDelegate(self))
+        self.setItemDelegateForColumn(3, FormulaDelegate(self))
         self.setItemDelegateForColumn(4, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(5, FloatDelegate(self))
         self.setItemDelegateForColumn(6, FloatDelegate(self))
@@ -248,7 +251,7 @@ class ActivityParameterTable(BaseParameterTable):
         self.setItemDelegateForColumn(0, StringDelegate(self))
         self.setItemDelegateForColumn(1, StringDelegate(self))
         self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, StringDelegate(self))
+        self.setItemDelegateForColumn(3, FormulaDelegate(self))
         self.setItemDelegateForColumn(4, ListDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(6, UncertaintyDelegate(self))
