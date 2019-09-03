@@ -13,14 +13,15 @@ class DatabaseDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         editor = QComboBox(parent)
-        editor.insertItems(0, databases.list)
         return editor
 
     def setEditorData(self, editor: QComboBox, index: QModelIndex):
         """ Populate the editor with data if editing an existing field.
         """
         value = str(index.data(Qt.DisplayRole))
-        editor.setCurrentText(value)
+        editor.clear()
+        editor.insertItems(0, databases.list)
+        editor.setCurrentIndex(databases.list.index(value))
 
     def setModelData(self, editor: QComboBox, model: QAbstractItemModel,
                      index: QModelIndex):
