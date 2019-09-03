@@ -31,11 +31,6 @@ class BaseParameterTable(ABDataFrameEdit):
     ]
     new_parameter = pyqtSignal()
 
-    def has_data(self) -> bool:
-        """ Test if the dataframe of the view has data to save.
-        """
-        return len(self.dataframe.index) > 0
-
     @dataframe_sync
     def sync(self, df):
         self.dataframe = df
@@ -135,7 +130,7 @@ class ProjectParameterTable(BaseParameterTable):
         """ Attempts to store all of the parameters in the dataframe
         as new (or updated) brightway project parameters
         """
-        if not self.has_data:
+        if self.rowCount() == 0:
             return
 
         data = self.dataframe.to_dict(orient='records')
@@ -207,7 +202,7 @@ class DataBaseParameterTable(BaseParameterTable):
         """ Separates the database parameters by db_name and attempts
         to save each chunk of parameters separately.
         """
-        if not self.has_data:
+        if self.rowCount() == 0:
             return
 
         used_db_names = self.dataframe["database"].unique()
@@ -420,7 +415,7 @@ class ActivityParameterTable(BaseParameterTable):
         """ Separates the activity parameters by group name and saves each
         chunk of parameters separately.
         """
-        if not self.has_data:
+        if self.rowCount() == 0:
             return
 
         # Unpack 'key' into 'database' and 'code' for the ParameterManager
