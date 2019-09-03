@@ -7,7 +7,7 @@ import pandas as pd
 from bw2data.parameters import (ActivityParameter, DatabaseParameter, Group,
                                 ProjectParameter)
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QContextMenuEvent, QCursor, QDragMoveEvent, QDropEvent
+from PyQt5.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import QMenu
 
 from activity_browser.app.settings import project_settings
@@ -378,7 +378,7 @@ class ActivityParameterTable(BaseParameterTable):
         menu.addAction(
             qicons.delete, "Remove order from group(s)", self.unset_group_order
         )
-        menu.popup(QCursor.pos())
+        menu.popup(event.globalPos())
         menu.exec()
 
     @pyqtSlot()
