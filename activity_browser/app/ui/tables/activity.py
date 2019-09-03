@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from bw2data.parameters import (ProjectParameter, DatabaseParameter, Group,
+                                ActivityParameter)
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -168,6 +170,47 @@ class BaseExchangeTable(ABDataFrameEdit):
         key = row["exchange"]["output"] if self.downstream else row["exchange"]["input"]
         signals.open_activity_tab.emit(key)
         signals.add_activity_to_history.emit(key)
+
+    def get_usable_parameters(self) -> list:
+        """ Use the `key` set for the table to determine the database and
+        group of the activity, using that information to constrain the usable
+        parameters.
+        """
+        project = [
+            [p.name, p.amount, "project"] for p in ProjectParameter.select()
+        ]
+        if self.key is None:
+            return project
+
+        query = (DatabaseParameter.select()
+                 .where(DatabaseParameter.database == self.key[0]))
+        database = [
+            [p.name, p.amount, "database"] for p in query.iterator()
+        ]
+
+        try:
+            # Get the parameter for the current activity
+            act = (ActivityParameter
+                   .get(ActivityParameter.database == self.key[0],
+                        ActivityParameter.code == self.key[1]))
+            # First, build a list for parameters in the same group
+            query = (ActivityParameter.select()
+                     .where(ActivityParameter.group == act.group))
+            activity = [
+                [p.name, p.amount, "activity"] for p in query.iterator()
+            ]
+            # Then extend the list with parameters from groups in the `order`
+            # field
+            group = Group.get(name=act.group)
+            query = (ActivityParameter.select()
+                     .where(ActivityParameter.group.in_(group.order)))
+            activity += [
+                [p.name, p.amount, "activity"] for p in query.iterator()
+            ]
+        except ActivityParameter.DoesNotExist:
+            activity = []
+
+        return project + database + activity
 
 
 class ProductExchangeTable(BaseExchangeTable):
