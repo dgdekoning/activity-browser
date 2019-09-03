@@ -325,9 +325,7 @@ class ActivityParameterTable(BaseParameterTable):
                 )
                 continue
             row = self._build_parameter(key)
-            self.dataframe = self.dataframe.append(
-                row, ignore_index=True
-            )
+            self.dataframe = self.dataframe.append(row, ignore_index=True)
 
         self.sync(self.dataframe)
         self.new_parameter.emit()
@@ -340,9 +338,7 @@ class ActivityParameterTable(BaseParameterTable):
         if key in self.dataframe["key"]:
             return
         row = self._build_parameter(key)
-        self.dataframe = self.dataframe.append(
-            row, ignore_index=True
-        )
+        self.dataframe = self.dataframe.append(row, ignore_index=True)
         self.sync(self.dataframe)
         self.new_parameter.emit()
 
