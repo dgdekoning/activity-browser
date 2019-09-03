@@ -340,7 +340,7 @@ class BiosphereExchangeTable(BaseExchangeTable):
 
 class DownstreamExchangeTable(TechnosphereExchangeTable):
     """ Inherit from the `TechnosphereExchangeTable` as the downstream class is
-    very similar.
+    very similar, just more restricted.
     """
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -350,12 +350,10 @@ class DownstreamExchangeTable(TechnosphereExchangeTable):
         self.table_name = "downstream"
         self.drag_model = True
         self.setDragDropMode(QtWidgets.QTableView.DragOnly)
+        self.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
 
     def _resize(self) -> None:
         """ Next to `exchange`, also hide the `formula` column.
         """
         self.setColumnHidden(7, True)
         self.setColumnHidden(8, True)
-
-    def contextMenuEvent(self, a0) -> None:
-        pass
