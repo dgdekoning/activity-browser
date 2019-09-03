@@ -4,7 +4,8 @@ from bw2data.parameters import (ProjectParameter, DatabaseParameter, Group,
 import pandas as pd
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .delegates import FloatDelegate, StringDelegate, ViewOnlyDelegate
+from .delegates import (FloatDelegate, FormulaDelegate, StringDelegate,
+                        ViewOnlyDelegate)
 from .views import ABDataFrameEdit, dataframe_sync
 from ..icons import qicons
 from ...signals import signals
@@ -214,13 +215,14 @@ class BaseExchangeTable(ABDataFrameEdit):
 
 
 class ProductExchangeTable(BaseExchangeTable):
-    COLUMNS = ["Amount", "Unit", "Product"]
+    COLUMNS = ["Amount", "Unit", "Product", "Formula"]
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setItemDelegateForColumn(0, FloatDelegate(self))
         self.setItemDelegateForColumn(1, StringDelegate(self))
         self.setItemDelegateForColumn(2, StringDelegate(self))
+        self.setItemDelegateForColumn(3, FormulaDelegate(self))
         self.setDragDropMode(QtWidgets.QTableView.DragDrop)
         self.table_name = "product"
 
@@ -228,13 +230,14 @@ class ProductExchangeTable(BaseExchangeTable):
         row, adj_act = super().create_row(exchange)
         row.update({
             "Product": adj_act.get("reference product") or adj_act.get("name"),
+            "Formula": exchange.get("formula"),
         })
         return row, adj_act
 
     def _resize(self) -> None:
         """ Ensure the `exchange` column is hidden whenever the table is shown.
         """
-        self.setColumnHidden(3, True)
+        self.setColumnHidden(4, True)
 
     def dragEnterEvent(self, event):
         """ Accept exchanges from a technosphere database table, and the
@@ -262,7 +265,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
         self.setItemDelegateForColumn(4, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(6, ViewOnlyDelegate(self))
-        self.setItemDelegateForColumn(7, StringDelegate(self))
+        self.setItemDelegateForColumn(7, FormulaDelegate(self))
         self.setDragDropMode(QtWidgets.QTableView.DragDrop)
         self.table_name = "technosphere"
         self.drag_model = True
@@ -275,7 +278,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
             "Location": adj_act.get("location", "Unknown"),
             "Database": adj_act.get("database"),
             "Uncertainty": adj_act.get("uncertainty type", 0),
-            "Formula": exchange.get("formula", ""),
+            "Formula": exchange.get("formula"),
         })
         return row, adj_act
 
@@ -309,7 +312,7 @@ class BiosphereExchangeTable(BaseExchangeTable):
         self.setItemDelegateForColumn(3, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(4, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
-        self.setItemDelegateForColumn(6, StringDelegate(self))
+        self.setItemDelegateForColumn(6, FormulaDelegate(self))
         self.table_name = "biosphere"
         self.setDragDropMode(QtWidgets.QTableView.DropOnly)
 
