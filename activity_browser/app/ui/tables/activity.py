@@ -36,6 +36,7 @@ class BaseExchangeTable(ABDataFrameEdit):
         self.downstream = False
         self.key = None if not hasattr(parent, "key") else parent.key
         self.exchanges = []
+        self.exchange_column = 0
         self._connect_signals()
 
     def _connect_signals(self):
@@ -56,9 +57,11 @@ class BaseExchangeTable(ABDataFrameEdit):
 
         Make sure to store the Exchange object itself in the dataframe as well.
         """
+        columns = self.COLUMNS + ["exchange"]
         df = pd.DataFrame([
             self.create_row(exchange=exc)[0] for exc in self.exchanges
-        ], columns=self.COLUMNS + ["exchange"])
+        ], columns=columns)
+        self.exchange_column = columns.index("exchange")
         return df
 
     def create_row(self, exchange) -> (dict, object):
@@ -73,10 +76,14 @@ class BaseExchangeTable(ABDataFrameEdit):
         return row, adj_act
 
     def get_key(self, proxy: QtCore.QModelIndex) -> tuple:
-        """ Get the activity key from the exchange. """
+        """ Get the activity key from an exchange.
+
+        This is done by reaching into the table model through the proxy model
+        """
         index = self.get_source_index(proxy)
-        exchange = self.dataframe.iloc[index.row(), ]["exchange"]
-        return exchange.output if self.downstream else exchange.input
+        exchange = self.model.index(index.row(), self.exchange_column).data()
+        act = exchange.output if self.downstream else exchange.input
+        return act.key
 
     @QtCore.pyqtSlot()
     def delete_exchanges(self) -> None:
