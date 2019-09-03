@@ -73,6 +73,13 @@ class BaseParameterTable(ABDataFrameEdit):
         """
         raise NotImplementedError
 
+    @staticmethod
+    def get_usable_parameters() -> list:
+        """ Builds a simple list of parameters that can be used in `this`
+        table for use in delegates
+        """
+        raise NotImplementedError
+
 
 class ProjectParameterTable(BaseParameterTable):
     """ Table widget for project parameters
@@ -139,6 +146,12 @@ class ProjectParameterTable(BaseParameterTable):
     def uncertainty_columns(self, show: bool):
         for i in range(3, 9):
             self.setColumnHidden(i, not show)
+
+    @staticmethod
+    def get_usable_parameters() -> list:
+        return [
+            [p.name, p.amount, "project"] for p in ProjectParameter.select()
+        ]
 
 
 class DataBaseParameterTable(BaseParameterTable):
@@ -208,6 +221,16 @@ class DataBaseParameterTable(BaseParameterTable):
     def uncertainty_columns(self, show: bool):
         for i in range(4, 10):
             self.setColumnHidden(i, not show)
+
+    @staticmethod
+    def get_usable_parameters() -> list:
+        """ Include the project parameters, and generate database parameters.
+        """
+        project = ProjectParameterTable.get_usable_parameters()
+        return project + [
+            [p.name, p.amount, "database ({})".format(p.database)]
+            for p in DatabaseParameter.select()
+        ]
 
 
 class ActivityParameterTable(BaseParameterTable):
@@ -499,6 +522,21 @@ class ActivityParameterTable(BaseParameterTable):
             param.group for param in ActivityParameter.select()
             if param.group not in ignore_groups
         ]))
+
+    @staticmethod
+    def get_usable_parameters() -> list:
+        """ Include all types of parameters.
+
+        NOTE: This method does not take into account which formula is being
+        edited, and therefore does not restrict which database or activity
+        parameters are returned.
+        """
+        project = ProjectParameterTable.get_usable_parameters()
+        database = DataBaseParameterTable.get_usable_parameters()
+        return project + database + [
+            [p.name, p.amount, "activity ({})".format(p.group)]
+            for p in ActivityParameter.select()
+        ]
 
 
 class ExchangesTable(ABDictTreeView):
