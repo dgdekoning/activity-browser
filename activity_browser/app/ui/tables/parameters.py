@@ -152,14 +152,13 @@ class ProjectParameterTable(BaseParameterTable):
     @staticmethod
     def get_usable_parameters() -> list:
         return [
-            [p.name, p.amount, "project"] for p in ProjectParameter.select()
+            [k, v, "project"] for k, v in ProjectParameter.static().items()
         ]
 
     @staticmethod
     def get_interpreter() -> Interpreter:
         interpreter = Interpreter()
-        for k, v in ProjectParameter.static().items():
-            interpreter.symtable[k] = v
+        interpreter.symtable.update(ProjectParameter.static())
         return interpreter
 
 
@@ -254,8 +253,7 @@ class DataBaseParameterTable(BaseParameterTable):
         """
         interpreter = ProjectParameterTable.get_interpreter()
         db_name = self.get_current_database()
-        for k, v in DatabaseParameter.static(db_name).items():
-            interpreter.symtable[k] = v
+        interpreter.symtable.update(DatabaseParameter.static(db_name))
         return interpreter
 
 
@@ -426,8 +424,7 @@ class ActivityParameterTable(BaseParameterTable):
         menu.addAction(
             qicons.delete, "Remove order from group(s)", self.unset_group_order
         )
-        menu.popup(event.globalPos())
-        menu.exec()
+        menu.exec(event.globalPos())
 
     @pyqtSlot()
     def open_activity_tab(self):
@@ -572,8 +569,7 @@ class ActivityParameterTable(BaseParameterTable):
     def get_interpreter(self) -> Interpreter:
         interpreter = Interpreter()
         group = self.get_current_group()
-        for k, v in ActivityParameter.static(group, full=True).items():
-            interpreter.symtable[k] = v
+        interpreter.symtable.update(ActivityParameter.static(group, full=True))
         return interpreter
 
 

@@ -233,14 +233,11 @@ class BaseExchangeTable(ABDataFrameEdit):
             act = (ActivityParameter
                    .get(ActivityParameter.database == self.key[0],
                         ActivityParameter.code == self.key[1]))
-            for k, v in ActivityParameter.static(act.group, full=True).items():
-                interpreter.symtable[k] = v
+            interpreter.symtable.update(ActivityParameter.static(act.group, full=True))
         except ActivityParameter.DoesNotExist as e:
             print("Could not find activity: {}".format(e))
-            data = ProjectParameter.static()
-            data.update(DatabaseParameter.static(self.key[0]))
-            for k, v in data.items():
-                interpreter.symtable[k] = v
+            interpreter.symtable.update(ProjectParameter.static())
+            interpreter.symtable.update(DatabaseParameter.static(self.key[0]))
         finally:
             return interpreter
 
