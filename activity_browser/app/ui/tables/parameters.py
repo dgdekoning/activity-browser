@@ -369,6 +369,9 @@ class ActivityParameterTable(BaseParameterTable):
         self.dataframe = self.dataframe.append(row, ignore_index=True)
         self.sync(self.dataframe)
         self.new_parameter.emit()
+        # Save the new parameter immediately.
+        self.save_parameters()
+        signals.parameters_changed.emit()
 
     @classmethod
     def _build_parameter(cls, key: tuple) -> dict:
@@ -603,7 +606,10 @@ class ExchangesTable(ABDictTreeView):
                      .limit(1)
                      .get())
         except ActivityParameter.DoesNotExist:
-            return
+            signals.add_activity_parameter.emit(key)
+            param = (ActivityParameter
+                     .get(ActivityParameter.database == key[0],
+                          ActivityParameter.code == key[1]))
 
         act = bw.get_activity(key)
         bw.parameters.add_exchanges_to_group(param.group, act)

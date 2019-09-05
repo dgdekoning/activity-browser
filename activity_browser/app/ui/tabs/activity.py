@@ -70,7 +70,6 @@ class ActivityTab(QtWidgets.QTabWidget):
 
     def __init__(self, key, parent=None, read_only=True):
         super(ActivityTab, self).__init__(parent)
-        self.parent = parent
         self.read_only = read_only
         self.db_read_only = bc.is_database_read_only(db_name=key[0])
         self.key = key
@@ -149,6 +148,7 @@ class ActivityTab(QtWidgets.QTabWidget):
 
     def connect_signals(self):
         signals.database_read_only_changed.connect(self.db_read_only_changed)
+        signals.parameters_changed.connect(self.populate)
         # signals.activity_modified.connect(self.update_activity_values)
 
     @QtCore.pyqtSlot()
