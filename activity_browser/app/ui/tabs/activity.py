@@ -33,7 +33,7 @@ class ActivitiesTab(ABTab):
             act = bw.get_activity(key)
             if not act.production():
                 return
-            new_tab = ActivityTab(key, parent=self)
+            new_tab = ActivityTab(key)
             self.tabs[key] = new_tab
             self.addTab(new_tab, bc.get_activity_name(act, str_length=30))
 
@@ -52,7 +52,7 @@ class ActivitiesTab(ABTab):
                 pass
 
 
-class ActivityTab(QtWidgets.QTabWidget):
+class ActivityTab(QtWidgets.QWidget):
     """The data relating to Brightway activities can be viewed and edited through this panel interface
     The interface is a GUI representation of the standard activity data format as determined by Brightway
     This is necessitated as AB does not save its own data structures to disk
