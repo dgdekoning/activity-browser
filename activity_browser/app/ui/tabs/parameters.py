@@ -131,6 +131,7 @@ the activity in that group.</li>
 
     def _connect_signals(self):
         signals.project_selected.connect(self.build_tables)
+        signals.parameters_changed.connect(self.build_tables)
         self.new_project_param.clicked.connect(
             lambda: self.add_parameter("project")
         )
