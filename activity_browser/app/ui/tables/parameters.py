@@ -438,7 +438,6 @@ class ActivityParameterTable(BaseParameterTable):
             return
         row = self._build_parameter(key)
         self.dataframe = self.dataframe.append(row, ignore_index=True)
-        self.new_parameter.emit()
         # Save the new parameter immediately.
         self.save_parameters()
         signals.parameters_changed.emit()
