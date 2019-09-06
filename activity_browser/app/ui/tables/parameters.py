@@ -565,11 +565,19 @@ class ActivityParameterTable(BaseParameterTable):
     def delete_parameters(self) -> None:
         """ Handle event to delete the given activities and related exchanges.
         """
-        for index in self.selectedIndexes():
-            source_index = self.get_source_index(index)
-            row = self.dataframe.iloc[source_index.row(), ]
+        deletable = set()
+        for proxy in self.selectedIndexes():
+            index = self.get_source_index(proxy)
+            row = self.dataframe.iloc[index.row(), ]
             act = bw.get_activity(row["key"])
             bw.parameters.remove_from_group(row["group"], act)
+            # Also remove the group if there are no more ActivityParameters
+            if ActivityParameter.get_or_none(group=row["group"]) is None:
+                deletable.add(row["group"])
+
+        # Remove empty groups
+        query = Group.delete().where(Group.name.in_(deletable))
+        query.execute()
 
         # Recalculate everything and emit `parameters_changed` signal
         bw.parameters.recalculate()
