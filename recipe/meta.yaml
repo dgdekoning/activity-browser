@@ -30,7 +30,7 @@ requirements:
     - bw2data >=3.4.3
     - eidl >=1.2.0
     - fuzzywuzzy
-    - matplotlib >=2.2.2
+    - matplotlib-base >=2.2.2
     - networkx
     - pandas >=0.24.1
     - pyqt==5.9.2
