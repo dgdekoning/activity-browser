@@ -5,3 +5,4 @@ recursive-include activity_browser *.html
 recursive-include activity_browser *.png
 recursive-include activity_browser *.js
 recursive-include activity_browser *.css
+recursive-exclude tests *.py
