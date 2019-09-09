@@ -272,6 +272,7 @@ class DataBaseParameterTable(BaseParameterTable):
         """
         row = {"database": None, "name": None, "amount": 0.0, "formula": ""}
         row.update({key: None for key in self.UNCERTAINTY})
+        row["parameter"] = None
         self.dataframe = self.dataframe.append(row, ignore_index=True)
         self.sync(self.dataframe)
         self.new_parameter.emit()
