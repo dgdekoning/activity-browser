@@ -432,14 +432,17 @@ class ActivityParameterTable(BaseParameterTable):
     @pyqtSlot(tuple)
     def add_simple_parameter(self, key: tuple) -> None:
         """ Given the activity key, generate a new row with data from
-        the activity and immediately call `save_parameters`.
+        the activity and immediately call `new_activity_parameters`.
+
+        NOTE: This is a shortcut to sidestep the functioning of the model
         """
         if key in self.dataframe["key"]:
             return
         row = self._build_parameter(key)
-        self.dataframe = self.dataframe.append(row, ignore_index=True)
+        row["database"], row["code"] = key
+        del row["key"], row["parameter"]
         # Save the new parameter immediately.
-        self.save_parameters()
+        bw.parameters.new_activity_parameters([row], row["group"])
         signals.parameters_changed.emit()
 
     @classmethod
@@ -679,9 +682,7 @@ class ExchangesTable(ABDictTreeView):
                      .get())
         except ActivityParameter.DoesNotExist:
             signals.add_activity_parameter.emit(key)
-            param = (ActivityParameter
-                     .get(ActivityParameter.database == key[0],
-                          ActivityParameter.code == key[1]))
+            param = ActivityParameter.get(database=key[0], code=key[1])
 
         act = bw.get_activity(key)
         bw.parameters.add_exchanges_to_group(param.group, act)
