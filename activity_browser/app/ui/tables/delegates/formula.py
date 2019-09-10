@@ -27,6 +27,7 @@ class FormulaDialog(QtWidgets.QDialog):
         self.parameters = QtWidgets.QTableView(self)
         model = QtGui.QStandardItemModel(self)
         self.parameters.setModel(model)
+        self.parameters.doubleClicked.connect(self.append_parameter_name)
         self.new_parameter = QtWidgets.QPushButton(
             qicons.add, "New parameter", self
         )
@@ -59,11 +60,10 @@ class FormulaDialog(QtWidgets.QDialog):
         self.interpreter = interpreter
 
     @property
-    def formula(self) -> Optional[str]:
+    def formula(self) -> str:
         """ Look into the text_field and return the formula.
         """
-        value = self.text_field.toPlainText().strip()
-        return value if value != "" else None
+        return self.text_field.toPlainText().strip()
 
     @formula.setter
     def formula(self, value) -> None:
@@ -71,6 +71,13 @@ class FormulaDialog(QtWidgets.QDialog):
         """
         value = "" if value is None else str(value)
         self.text_field.setPlainText(value)
+
+    def append_parameter_name(self, index: QtCore.QModelIndex) -> None:
+        """ Take the index from the parameters table and append the parameter
+        name to the formula.
+        """
+        param_name = self.parameters.model().index(index.row(), 0).data()
+        self.formula += param_name
 
     @QtCore.pyqtSlot()
     def validate_formula(self) -> None:
