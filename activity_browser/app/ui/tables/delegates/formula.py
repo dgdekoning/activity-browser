@@ -112,6 +112,7 @@ class FormulaDelegate(QtWidgets.QStyledItemDelegate):
         editor = QtWidgets.QWidget(parent)
         dialog = FormulaDialog(editor, QtCore.Qt.Window)
         dialog.setModal(True)
+        dialog.accepted.connect(lambda: self.commitData.emit(editor))
         return editor
 
     def setEditorData(self, editor: QtWidgets.QWidget, index: QtCore.QModelIndex):
