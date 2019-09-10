@@ -232,17 +232,17 @@ class DataBaseParameterTable(BaseParameterTable):
     requiring recursive dependency cleanup. Either leave the parameters
     in or delete the entire project.
     """
-    COLUMNS = ["database", "name", "amount", "formula"]
+    COLUMNS = ["name", "amount", "formula", "database"]
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.table_name = "database_parameter"
 
         # Set delegates for specific columns
-        self.setItemDelegateForColumn(0, DatabaseDelegate(self))
-        self.setItemDelegateForColumn(1, StringDelegate(self))
-        self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, FormulaDelegate(self))
+        self.setItemDelegateForColumn(0, StringDelegate(self))
+        self.setItemDelegateForColumn(1, FloatDelegate(self))
+        self.setItemDelegateForColumn(2, FormulaDelegate(self))
+        self.setItemDelegateForColumn(3, DatabaseDelegate(self))
         self.setItemDelegateForColumn(4, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(5, FloatDelegate(self))
         self.setItemDelegateForColumn(6, FloatDelegate(self))
@@ -329,7 +329,7 @@ class ActivityParameterTable(BaseParameterTable):
     """ Table widget for activity parameters
     """
     COLUMNS = [
-        "group", "name", "amount", "formula", "order", "key"
+        "name", "amount", "formula", "group", "order", "key"
     ]
 
     def __init__(self, parent=None):
@@ -338,9 +338,9 @@ class ActivityParameterTable(BaseParameterTable):
 
         # Set delegates for specific columns
         self.setItemDelegateForColumn(0, StringDelegate(self))
-        self.setItemDelegateForColumn(1, StringDelegate(self))
-        self.setItemDelegateForColumn(2, FloatDelegate(self))
-        self.setItemDelegateForColumn(3, FormulaDelegate(self))
+        self.setItemDelegateForColumn(1, FloatDelegate(self))
+        self.setItemDelegateForColumn(2, FormulaDelegate(self))
+        self.setItemDelegateForColumn(3, StringDelegate(self))
         self.setItemDelegateForColumn(4, ListDelegate(self))
         self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
         self.setItemDelegateForColumn(6, UncertaintyDelegate(self))
