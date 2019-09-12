@@ -1,11 +1,81 @@
 # -*- coding: utf-8 -*-
 from os import devnull
-from typing import Optional
 
 from asteval import Interpreter
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ...icons import qicons
+
+
+class CalculatorButtons(QtWidgets.QWidget):
+    """ A custom layout containing calculator buttons, emits a signal
+    for each button pressed.
+    """
+    button_press = QtCore.pyqtSignal(str)
+    clear = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.explain_text = """
+In addition to the other buttons on this calculator, the parameter formula
+can include a large amount of Python and Numpy functions, with Numpy
+overriding Python where the function names are the same. Below are some examples:
+
+sqrt(x)
+    Return the square root of x.
+
+sin(x)
+    Return the sine of x (measured in radians).
+
+arange([start,] stop[, step,])
+    Return evenly spaced values within a given interval.
+    eg. arange(3) = [0, 1, 2]
+
+max(x)
+    Returns the maximum of an array.
+
+For a more complete list see the `math` module in the Python documentation
+or the `ufuncs` in de Numpy documentation.
+"""
+        rows = [
+            [
+                ("+", "Add", lambda: self.button_press.emit(" + ")),
+                ("-", "Subtract", lambda: self.button_press.emit(" - ")),
+                ("X", "Multiply", lambda: self.button_press.emit(" * ")),
+                ("%", "Divide", lambda: self.button_press.emit(" / ")),
+            ],
+            [
+                ("x²", "X to the power of 2", lambda: self.button_press.emit(" ** 2 ")),
+                ("Xⁿ", "X to the power of N", lambda: self.button_press.emit(" ** ")),
+                ("mod", "Modulo", lambda: self.button_press.emit(" % ")),
+                ("C", "Clear Formula", lambda: self.clear.emit()),
+            ],
+            [
+                ("More...", "Additional functions", self.explanation),
+            ],
+        ]
+        # Construct the layout from the list of lists above.
+        layout = QtWidgets.QVBoxLayout()
+        layout.addStretch(1)
+        for row in rows:
+            bar = QtWidgets.QToolBar()
+            for btn in row:
+                w = QtWidgets.QPushButton(btn[0])
+                w.setToolTip(btn[1])
+                w.pressed.connect(btn[2])
+                w.setFixedSize(50, 50)
+                bar.addWidget(w)
+            layout.addWidget(bar)
+        layout.addStretch(1)
+        self.setLayout(layout)
+
+    @QtCore.pyqtSlot()
+    def explanation(self):
+        return QtWidgets.QMessageBox.question(
+            self, "More...", self.explain_text, QtWidgets.QMessageBox.Ok,
+            QtWidgets.QMessageBox.Ok
+        )
 
 
 class FormulaDialog(QtWidgets.QDialog):
@@ -33,10 +103,15 @@ class FormulaDialog(QtWidgets.QDialog):
         )
         self.new_parameter.setEnabled(False)
 
-        grid.addWidget(self.text_field, 0, 0, 5, 3)
-        grid.addWidget(self.buttons, 5, 0, 1, 3)
-        grid.addWidget(self.parameters, 0, 3, 5, 3)
-        grid.addWidget(self.new_parameter, 5, 3, 1, 3)
+        self.calculator = CalculatorButtons(self)
+        self.calculator.button_press.connect(self.append_calculator)
+        self.calculator.clear.connect(self.clear_formula)
+
+        grid.addWidget(self.text_field, 0, 0, 5, 1)
+        grid.addWidget(self.buttons, 5, 0, 1, 1)
+        grid.addWidget(self.calculator, 0, 1, 5, 1)
+        grid.addWidget(self.parameters, 0, 2, 5, 1)
+        grid.addWidget(self.new_parameter, 5, 2, 1, 1)
 
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
@@ -69,8 +144,10 @@ class FormulaDialog(QtWidgets.QDialog):
     def formula(self, value) -> None:
         """ Take the formula and set it to the text_field widget.
         """
-        value = "" if value is None else str(value)
-        self.text_field.setPlainText(value)
+        if value is None:
+            self.text_field.clear()
+        else:
+            self.text_field.setPlainText(str(value))
 
     def append_parameter_name(self, index: QtCore.QModelIndex) -> None:
         """ Take the index from the parameters table and append the parameter
@@ -78,6 +155,16 @@ class FormulaDialog(QtWidgets.QDialog):
         """
         param_name = self.parameters.model().index(index.row(), 0).data()
         self.formula += param_name
+
+    @QtCore.pyqtSlot(str)
+    def append_calculator(self, value: str) -> None:
+        """ Takes signals from the calculator and adds them into the formula.
+        """
+        self.formula += value
+
+    @QtCore.pyqtSlot()
+    def clear_formula(self) -> None:
+        self.formula = None
 
     @QtCore.pyqtSlot()
     def validate_formula(self) -> None:
