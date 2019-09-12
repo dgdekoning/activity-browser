@@ -329,7 +329,7 @@ class ActivityParameterTable(BaseParameterTable):
     """ Table widget for activity parameters
     """
     COLUMNS = [
-        "name", "amount", "formula", "group", "order", "key"
+        "name", "amount", "formula", "activity", "group", "order", "key"
     ]
 
     def __init__(self, parent=None):
@@ -340,18 +340,20 @@ class ActivityParameterTable(BaseParameterTable):
         self.setItemDelegateForColumn(0, StringDelegate(self))
         self.setItemDelegateForColumn(1, FloatDelegate(self))
         self.setItemDelegateForColumn(2, FormulaDelegate(self))
-        self.setItemDelegateForColumn(3, StringDelegate(self))
-        self.setItemDelegateForColumn(4, ListDelegate(self))
-        self.setItemDelegateForColumn(5, ViewOnlyDelegate(self))
-        self.setItemDelegateForColumn(6, UncertaintyDelegate(self))
-        self.setItemDelegateForColumn(7, FloatDelegate(self))
+        self.setItemDelegateForColumn(3, ViewOnlyDelegate(self))
+        self.setItemDelegateForColumn(4, StringDelegate(self))
+        self.setItemDelegateForColumn(5, ListDelegate(self))
+        self.setItemDelegateForColumn(6, ViewOnlyDelegate(self))
+        self.setItemDelegateForColumn(7, UncertaintyDelegate(self))
         self.setItemDelegateForColumn(8, FloatDelegate(self))
         self.setItemDelegateForColumn(9, FloatDelegate(self))
         self.setItemDelegateForColumn(10, FloatDelegate(self))
         self.setItemDelegateForColumn(11, FloatDelegate(self))
+        self.setItemDelegateForColumn(12, FloatDelegate(self))
 
         # Set dropEnabled
-        self.viewport().setAcceptDrops(True)
+        self.setDragDropMode(ABDataFrameEdit.DropOnly)
+        self.setAcceptDrops(True)
         self._connect_signals()
 
     def _connect_signals(self):
@@ -383,6 +385,8 @@ class ActivityParameterTable(BaseParameterTable):
         row = {key: parameter.get(key, "") for key in cls.COLUMNS}
         # Combine the 'database' and 'code' fields of the parameter into a 'key'
         row["key"] = (parameter.get("database"), parameter.get("code"))
+        act = bw.get_activity(row["key"])
+        row["activity"] = act.get("name")
         data = parameter.get("data", {})
         row.update(cls.extract_uncertainty_data(data))
         # Cheating because we have the ID of the ActivityParameter
@@ -540,7 +544,7 @@ class ActivityParameterTable(BaseParameterTable):
         signals.parameters_changed.emit()
 
     def uncertainty_columns(self, show: bool):
-        for i in range(6, 12):
+        for i in range(7, 13):
             self.setColumnHidden(i, not show)
 
     def _store_group_order(self, group_name: str) -> None:
