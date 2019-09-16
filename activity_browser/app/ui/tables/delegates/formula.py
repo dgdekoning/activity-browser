@@ -5,6 +5,7 @@ from asteval import Interpreter
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from ...icons import qicons
+from ...wizards import ParameterWizard
 
 
 class CalculatorButtons(QtWidgets.QWidget):
@@ -83,6 +84,7 @@ class FormulaDialog(QtWidgets.QDialog):
         super().__init__(parent=parent, flags=flags)
         self.setWindowTitle("Build a formula")
         self.interpreter = None
+        self.key = ("", "")
 
         # 6 broad by 6 deep.
         grid = QtWidgets.QGridLayout(self)
@@ -101,7 +103,7 @@ class FormulaDialog(QtWidgets.QDialog):
         self.new_parameter = QtWidgets.QPushButton(
             qicons.add, "New parameter", self
         )
-        self.new_parameter.setEnabled(False)
+        self.new_parameter.clicked.connect(self.create_parameter)
 
         self.calculator = CalculatorButtons(self)
         self.calculator.button_press.connect(self.append_calculator)
@@ -133,6 +135,15 @@ class FormulaDialog(QtWidgets.QDialog):
 
     def insert_interpreter(self, interpreter: Interpreter) -> None:
         self.interpreter = interpreter
+
+    def insert_key(self, key: tuple) -> None:
+        """ The key consists of two strings, no more, no less.
+        """
+        self.key = key
+
+    @QtCore.pyqtSlot()
+    def create_parameter(self):
+        wizard = ParameterWizard(self.key, self)
 
     @property
     def formula(self) -> str:
@@ -223,6 +234,12 @@ class FormulaDelegate(QtWidgets.QStyledItemDelegate):
             dialog.formula = data
             interpreter = parent.get_interpreter()
             dialog.insert_interpreter(interpreter)
+            # Now see if we can construct a (partial) key
+            if hasattr(parent, "key"):
+                # This works for exchange tables.
+                dialog.insert_key(parent.key)
+            elif hasattr(parent, "get_key"):
+                dialog.insert_key(parent.get_key())
 
     def setModelData(self, editor: QtWidgets.QWidget, model: QtCore.QAbstractItemModel,
                      index: QtCore.QModelIndex):
