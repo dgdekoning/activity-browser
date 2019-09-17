@@ -51,13 +51,13 @@ class ParameterWizard(QtWidgets.QWizard):
         elif selected == 1:
             db = data.pop("database")
             bw.parameters.new_database_parameters([data], db)
-            p_type = "database"
+            p_type = "database ({})".format(db)
         elif selected == 2:
             group = data.pop("group")
             data["database"] = self.key[0]
             data["code"] = self.key[1]
             bw.parameters.new_activity_parameters([data], group)
-            p_type = "activity"
+            p_type = "activity ({})".format(group)
 
         self.complete.emit(name, amount, p_type)
         super().accept()
