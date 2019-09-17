@@ -109,8 +109,8 @@ class FormulaDialog(QtWidgets.QDialog):
         self.new_parameter.clicked.connect(self.create_parameter)
 
         self.calculator = CalculatorButtons(self)
-        self.calculator.button_press.connect(self.append_calculator)
-        self.calculator.clear.connect(self.clear_formula)
+        self.calculator.button_press.connect(self.text_field.insert)
+        self.calculator.clear.connect(self.text_field.clear)
 
         grid.addWidget(self.text_field, 0, 0, 5, 1)
         grid.addWidget(self.buttons, 5, 0, 1, 1)
@@ -138,7 +138,7 @@ class FormulaDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot(str, str, str)
     def append_parameter(self, name: str, amount: str, p_type: str) -> None:
-        """ Used to catch newly created parameters and adding them to the list.
+        """ Catch new parameters from the wizard and add them to the list.
         """
         model = self.parameters.model()
         x = model.rowCount()
@@ -175,22 +175,13 @@ class FormulaDialog(QtWidgets.QDialog):
         else:
             self.text_field.setText(str(value))
 
+    @QtCore.pyqtSlot(QtCore.QModelIndex)
     def append_parameter_name(self, index: QtCore.QModelIndex) -> None:
         """ Take the index from the parameters table and append the parameter
         name to the formula.
         """
         param_name = self.parameters.model().index(index.row(), 0).data()
-        self.formula += param_name
-
-    @QtCore.pyqtSlot(str)
-    def append_calculator(self, value: str) -> None:
-        """ Takes signals from the calculator and adds them into the formula.
-        """
-        self.formula += value
-
-    @QtCore.pyqtSlot()
-    def clear_formula(self) -> None:
-        self.formula = None
+        self.text_field.insert(param_name)
 
     @QtCore.pyqtSlot()
     def validate_formula(self) -> None:
