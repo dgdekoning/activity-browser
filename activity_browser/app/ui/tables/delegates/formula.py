@@ -88,7 +88,7 @@ class FormulaDialog(QtWidgets.QDialog):
 
         # 6 broad by 6 deep.
         grid = QtWidgets.QGridLayout(self)
-        self.text_field = QtWidgets.QPlainTextEdit(self)
+        self.text_field = QtWidgets.QLineEdit(self)
         self.text_field.textChanged.connect(self.validate_formula)
         self.buttons = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.Save | QtWidgets.QDialogButtonBox.Cancel
@@ -99,6 +99,9 @@ class FormulaDialog(QtWidgets.QDialog):
         self.parameters = QtWidgets.QTableView(self)
         model = QtGui.QStandardItemModel(self)
         self.parameters.setModel(model)
+        completer = QtWidgets.QCompleter(model, self)
+        completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        self.text_field.setCompleter(completer)
         self.parameters.doubleClicked.connect(self.append_parameter_name)
         self.new_parameter = QtWidgets.QPushButton(
             qicons.add, "New parameter", self
@@ -161,7 +164,7 @@ class FormulaDialog(QtWidgets.QDialog):
     def formula(self) -> str:
         """ Look into the text_field and return the formula.
         """
-        return self.text_field.toPlainText().strip()
+        return self.text_field.text().strip()
 
     @formula.setter
     def formula(self, value) -> None:
@@ -170,7 +173,7 @@ class FormulaDialog(QtWidgets.QDialog):
         if value is None:
             self.text_field.clear()
         else:
-            self.text_field.setPlainText(str(value))
+            self.text_field.setText(str(value))
 
     def append_parameter_name(self, index: QtCore.QModelIndex) -> None:
         """ Take the index from the parameters table and append the parameter
@@ -195,7 +198,7 @@ class FormulaDialog(QtWidgets.QDialog):
         """
         self.text_field.blockSignals(True)
         if self.interpreter:
-            formula = self.text_field.toPlainText().strip()
+            formula = self.text_field.text().strip()
             # Do not write massive amounts of errors to stderr if the user
             # is busy writing.
             with open(devnull, "w") as errfile:
