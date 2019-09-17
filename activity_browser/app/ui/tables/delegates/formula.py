@@ -133,6 +133,17 @@ class FormulaDialog(QtWidgets.QDialog):
                 model.setItem(x, y, model_item)
         self.parameters.resizeColumnsToContents()
 
+    @QtCore.pyqtSlot(str, str, str)
+    def append_parameter(self, name: str, amount: str, p_type: str) -> None:
+        """ Used to catch newly created parameters and adding them to the list.
+        """
+        model = self.parameters.model()
+        x = model.rowCount()
+        for y, i in enumerate([name, amount, p_type]):
+            item = QtGui.QStandardItem(i)
+            item.setEditable(False)
+            model.setItem(x, y, item)
+
     def insert_interpreter(self, interpreter: Interpreter) -> None:
         self.interpreter = interpreter
 
@@ -144,6 +155,7 @@ class FormulaDialog(QtWidgets.QDialog):
     @QtCore.pyqtSlot()
     def create_parameter(self):
         wizard = ParameterWizard(self.key, self)
+        wizard.complete.connect(self.append_parameter)
 
     @property
     def formula(self) -> str:

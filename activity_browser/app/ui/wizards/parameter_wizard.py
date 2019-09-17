@@ -18,6 +18,8 @@ PARAMETER_FIELDS_ENUM = {
 
 
 class ParameterWizard(QtWidgets.QWizard):
+    complete = QtCore.pyqtSignal(str, str, str)
+
     def __init__(self, key: tuple, parent=None):
         super().__init__(parent)
 
@@ -40,18 +42,24 @@ class ParameterWizard(QtWidgets.QWizard):
         data = {
             field: self.field(field) for field in PARAMETER_FIELDS_ENUM[selected]
         }
-
+        # Copy data here as it gets removed from during param creation
+        name = data.get("name")
+        amount = str(data.get("amount"))
+        p_type = "project"
         if selected == 0:
             bw.parameters.new_project_parameters([data])
         elif selected == 1:
             db = data.pop("database")
             bw.parameters.new_database_parameters([data], db)
+            p_type = "database"
         elif selected == 2:
             group = data.pop("group")
             data["database"] = self.key[0]
             data["code"] = self.key[1]
             bw.parameters.new_activity_parameters([data], group)
+            p_type = "activity"
 
+        self.complete.emit(name, amount, p_type)
         super().accept()
 
 
