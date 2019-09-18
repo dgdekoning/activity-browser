@@ -2,7 +2,7 @@
 import brightway2 as bw
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import activity_browser.app.bwutils.commontasks as bc
+from activity_browser.app.bwutils import commontasks as bc
 
 
 PARAMETER_STRING_ENUM = {
