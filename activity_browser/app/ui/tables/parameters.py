@@ -17,7 +17,7 @@ from activity_browser.app.settings import project_settings
 from activity_browser.app.signals import signals
 
 from ..icons import qicons
-from ..widgets import parameter_save_errorbox, simple_warning_box
+from ..widgets import simple_warning_box
 from .delegates import (DatabaseDelegate, FloatDelegate, FormulaDelegate,
                         ListDelegate, StringDelegate, UncertaintyDelegate,
                         ViewOnlyDelegate)
@@ -84,12 +84,6 @@ class BaseParameterTable(ABDataFrameEdit):
         """
         row = {key: data.get(key) for key in cls.UNCERTAINTY}
         return row
-
-    def save_parameters(self, overwrite: bool = True) -> Optional[int]:
-        """ Take the data from the model and call the correct brightway
-        parameters helper method to store it.
-        """
-        raise NotImplementedError
 
     def get_parameter(self, proxy):
         """ Reach into the model and return the `parameter` object.
@@ -158,10 +152,6 @@ class ProjectParameterTable(BaseParameterTable):
 
     Using parts of https://stackoverflow.com/a/47021620
     and https://doc.qt.io/qt-5/model-view-programming.html
-
-    NOTE: Currently no good way to delete project parameters due to
-    requiring recursive dependency cleanup. Either leave the parameters
-    in or delete the entire project.
     """
     COLUMNS = ["name", "amount", "formula"]
 
@@ -229,22 +219,6 @@ class ProjectParameterTable(BaseParameterTable):
             signals.parameters_changed.emit()
         except ValueError as e:
             simple_warning_box(self, "Name already in use!", str(e))
-
-    def save_parameters(self, overwrite: bool=True) -> Optional[int]:
-        """ Attempts to store all of the parameters in the dataframe
-        as new (or updated) brightway project parameters
-
-        @deprecated
-        """
-        if self.rowCount() == 0:
-            return
-
-        data = self.dataframe.to_dict(orient='records')
-        try:
-            bw.parameters.new_project_parameters(data, overwrite)
-            signals.parameters_changed.emit()
-        except Exception as e:
-            return parameter_save_errorbox(self, e)
 
     def uncertainty_columns(self, show: bool):
         for i in range(3, 9):
@@ -321,10 +295,6 @@ class ProjectParameterTable(BaseParameterTable):
 
 class DataBaseParameterTable(BaseParameterTable):
     """ Table widget for database parameters
-
-    NOTE: Currently no good way to delete database parameters due to
-    requiring recursive dependency cleanup. Either leave the parameters
-    in or delete the entire project.
     """
     COLUMNS = ["name", "amount", "formula", "database"]
 
@@ -396,26 +366,6 @@ class DataBaseParameterTable(BaseParameterTable):
             signals.parameters_changed.emit()
         except ValueError as e:
             simple_warning_box(self, "Name already in use!", str(e))
-
-    def save_parameters(self, overwrite: bool=True) -> Optional[int]:
-        """ Separates the database parameters by db_name and attempts
-        to save each chunk of parameters separately.
-
-        @deprecated
-        """
-        if self.rowCount() == 0:
-            return
-
-        used_db_names = self.dataframe["database"].unique()
-        for db_name in used_db_names:
-            data = (self.dataframe
-                    .loc[self.dataframe["database"] == db_name]
-                    .to_dict(orient="records"))
-            try:
-                bw.parameters.new_database_parameters(data, db_name, overwrite)
-                signals.parameters_changed.emit()
-            except Exception as e:
-                return parameter_save_errorbox(self, e)
 
     def uncertainty_columns(self, show: bool):
         for i in range(4, 10):
@@ -602,27 +552,6 @@ class ActivityParameterTable(BaseParameterTable):
         bw.parameters.new_activity_parameters([row], group)
         signals.parameters_changed.emit()
 
-    @classmethod
-    def _build_parameter(cls, key: tuple) -> dict:
-        """ @deprecated """
-        act = bw.get_activity(key)
-        prep_name = bc.clean_activity_name(act.get("name"))
-        group = bc.build_activity_group_name(key, prep_name)
-        count = (ActivityParameter.select()
-                 .where(ActivityParameter.group == group).count())
-
-        row = {
-            "group": group,
-            "name": "{}_{}".format(prep_name, count + 1),
-            "amount": act.get("amount", 0.0),
-            "formula": act.get("formula", ""),
-            "order": "",
-            "key": key,
-            "parameter": None,
-        }
-        row.update({key: None for key in cls.UNCERTAINTY})
-        return row
-
     def contextMenuEvent(self, event: QContextMenuEvent):
         """ Override and activate QTableView.contextMenuEvent()
 
@@ -649,59 +578,9 @@ class ActivityParameterTable(BaseParameterTable):
             key = self.model.index(index.row(), self.COLUMNS.index("key")).data()
             signals.open_activity_tab.emit(literal_eval(key))
 
-    def save_parameters(self, overwrite: bool = True) -> Optional[int]:
-        """ Separates the activity parameters by group name and saves each
-        chunk of parameters separately.
-        """
-        if self.rowCount() == 0:
-            return
-
-        # Unpack 'key' into 'database' and 'code' for the ParameterManager
-        df = self.dataframe.copy()
-        df["database"], df["code"] = zip(*df["key"].apply(lambda x: (x[0], x[1])))
-        df.drop(["key", "parameter"], axis=1, inplace=True)
-
-        groups = df["group"].str.strip().unique()
-        if "" in groups:
-            return parameter_save_errorbox(
-                self, "Cannot use an empty string as group name."
-            )
-
-        for group in groups:
-            data = df.loc[df["group"] == group].to_dict(orient="records")
-            try:
-                bw.parameters.new_activity_parameters(data, group, overwrite)
-                self._store_group_order(group)
-            except Exception as e:
-                return parameter_save_errorbox(self, e)
-
-        signals.parameters_changed.emit()
-
     def uncertainty_columns(self, show: bool):
         for i in range(7, 13):
             self.setColumnHidden(i, not show)
-
-    def _store_group_order(self, group_name: str) -> None:
-        """Checks if anywhere in the 'group'-sliced dataframe the user has
-        set the order field. Update the Group object if so.
-
-        Also, if the user has set two different orders in the same group,
-        raise a ValueError
-        """
-        df = self.dataframe.loc[self.dataframe["group"] == group_name]
-        orders = df["order"].replace("", np.nan).dropna().unique()
-        if orders.size == 1:
-            # If any order is given, update the Group object
-            order = [i.lstrip() for i in orders[0].split(",")]
-            if group_name in order:
-                order.remove(group_name)
-            group = Group.get(name=group_name)
-            group.order = order
-            group.save()
-        elif orders.size > 1:
-            raise ValueError(
-                "Multiple different orders given for group {}".format(group_name)
-            )
 
     def store_group_order(self, proxy) -> None:
         """ Store the given order in the Group used by the parameter linked
