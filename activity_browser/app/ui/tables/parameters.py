@@ -117,17 +117,9 @@ class BaseParameterTable(ABDataFrameEdit):
 
     def delete_parameter(self, proxy) -> None:
         param = self.get_parameter(proxy)
-        if param:
-            with bw.parameters.db.atomic():
-                param.delete_instance()
-            df = self.build_df()
-        else:
-            # Remove the parameter before it is stored in the database
-            index = self.get_source_index(proxy)
-            row_index = self.dataframe.iloc[index.row()].name
-            df = self.dataframe.drop(row_index)
-            df.reset_index(drop=True, inplace=True)
-        self.sync(df)
+        with bw.parameters.db.atomic():
+            param.delete_instance()
+        self.sync(self.build_df())
 
     def uncertainty_columns(self, show: bool):
         """ Given a boolean, iterates over the uncertainty columns and either
