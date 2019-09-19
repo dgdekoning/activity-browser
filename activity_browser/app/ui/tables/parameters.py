@@ -223,8 +223,7 @@ class ProjectParameterTable(BaseParameterTable):
         df = pd.DataFrame(data, columns=cls.combine_columns())
         return df
 
-    @staticmethod
-    def add_parameter() -> None:
+    def add_parameter(self) -> None:
         """ Build a new parameter and immediately store it.
         """
         counter = (ProjectParameter.select().count() +
@@ -233,8 +232,11 @@ class ProjectParameterTable(BaseParameterTable):
             "name": "param_{}".format(counter + 1),
             "amount": 0.0
         }
-        bw.parameters.new_project_parameters([param])
-        signals.parameters_changed.emit()
+        try:
+            bw.parameters.new_project_parameters([param], False)
+            signals.parameters_changed.emit()
+        except ValueError as e:
+            simple_warning_box(self, "Name already in use!", str(e))
 
     def save_parameters(self, overwrite: bool=True) -> Optional[int]:
         """ Attempts to store all of the parameters in the dataframe
@@ -355,21 +357,23 @@ class DataBaseParameterTable(BaseParameterTable):
         df = pd.DataFrame(data, columns=cls.combine_columns())
         return df
 
-    @staticmethod
-    def add_parameter() -> None:
+    def add_parameter(self) -> None:
         """ Add a new database parameter to the dataframe
 
         NOTE: The new parameter uses the first database it can find.
         """
         counter = (ProjectParameter.select().count() +
                    DatabaseParameter.select().count())
+        database = next(x for x in bw.databases)
         param = {
-            "database": next(x for x in bw.databases),
             "name": "param_{}".format(counter + 1),
             "amount": 0.0
         }
-        bw.parameters.new_database_parameters([param])
-        signals.parameters_changed.emit()
+        try:
+            bw.parameters.new_database_parameters([param], database, False)
+            signals.parameters_changed.emit()
+        except ValueError as e:
+            simple_warning_box(self, "Name already in use!", str(e))
 
     def save_parameters(self, overwrite: bool=True) -> Optional[int]:
         """ Separates the database parameters by db_name and attempts
