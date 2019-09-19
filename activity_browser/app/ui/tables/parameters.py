@@ -222,22 +222,24 @@ class ProjectParameterTable(BaseParameterTable):
         df = pd.DataFrame(data, columns=cls.combine_columns())
         return df
 
-    def add_parameter(self) -> None:
-        """ Take the given row and append it to the dataframe.
-
-        NOTE: Any new parameters are only stored in memory until
-        `save_project_parameters` is called in the tab
+    @staticmethod
+    def add_parameter() -> None:
+        """ Build a new parameter and immediately store it.
         """
-        row = {"name": None, "amount": 0.0, "formula": ""}
-        row.update({key: None for key in self.UNCERTAINTY})
-        row["parameter"] = None
-        self.dataframe = self.dataframe.append(row, ignore_index=True)
-        self.sync(self.dataframe)
-        self.new_parameter.emit()
+        counter = (ProjectParameter.select().count() +
+                   DatabaseParameter.select().count())
+        param = {
+            "name": "param_{}".format(counter + 1),
+            "amount": 0.0
+        }
+        bw.parameters.new_project_parameters([param])
+        signals.parameters_changed.emit()
 
     def save_parameters(self, overwrite: bool=True) -> Optional[int]:
         """ Attempts to store all of the parameters in the dataframe
         as new (or updated) brightway project parameters
+
+        @deprecated
         """
         if self.rowCount() == 0:
             return
@@ -352,22 +354,27 @@ class DataBaseParameterTable(BaseParameterTable):
         df = pd.DataFrame(data, columns=cls.combine_columns())
         return df
 
-    def add_parameter(self) -> None:
+    @staticmethod
+    def add_parameter() -> None:
         """ Add a new database parameter to the dataframe
 
-        NOTE: Any new parameters are only stored in memory until
-        `save_project_parameters` is called
+        NOTE: The new parameter uses the first database it can find.
         """
-        row = {"database": None, "name": None, "amount": 0.0, "formula": ""}
-        row.update({key: None for key in self.UNCERTAINTY})
-        row["parameter"] = None
-        self.dataframe = self.dataframe.append(row, ignore_index=True)
-        self.sync(self.dataframe)
-        self.new_parameter.emit()
+        counter = (ProjectParameter.select().count() +
+                   DatabaseParameter.select().count())
+        param = {
+            "database": next(x for x in bw.databases),
+            "name": "param_{}".format(counter + 1),
+            "amount": 0.0
+        }
+        bw.parameters.new_database_parameters([param])
+        signals.parameters_changed.emit()
 
     def save_parameters(self, overwrite: bool=True) -> Optional[int]:
         """ Separates the database parameters by db_name and attempts
         to save each chunk of parameters separately.
+
+        @deprecated
         """
         if self.rowCount() == 0:
             return
