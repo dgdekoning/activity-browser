@@ -7,7 +7,7 @@ import brightway2 as bw
 import numpy as np
 import pandas as pd
 from bw2data.parameters import (ActivityParameter, DatabaseParameter, Group,
-                                ProjectParameter)
+                                ProjectParameter, get_new_symbols)
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox
@@ -261,12 +261,42 @@ class ProjectParameterTable(BaseParameterTable):
             self.setColumnHidden(i, not show)
 
     @staticmethod
+    def dependency_chain() -> list:
+        """ Implement a dependency_chain-lite call for ProjectParameters.
+
+        The only major difference with `DatabaseParameter.dependency_chain`
+        is that we do not pass a context to `get_new_symbols`.
+        """
+        data = ProjectParameter.load()
+        if not data:
+            return []
+
+        # Parse all formulas, find missing variables
+        needed = get_new_symbols(data.values())
+        if not needed:
+            return []
+
+        names, chain = set(), []
+        for name in ProjectParameter.static(only=needed):
+            names.add(name)
+            needed.remove(name)
+        if names:
+            chain.append({'kind': 'project', 'group': 'project', 'names': names})
+
+        return chain
+
+    @staticmethod
     def parameter_is_deletable(parameter: ProjectParameter) -> bool:
         """ Take a ProjectParameter and determine if it can be deleted.
 
-        Iterate through all of the database and activity parameters,
-        return False if any of them use the parameter, otherwise return True.
+        Iterate through all of the parameters, return False if any of them
+        use the parameter, otherwise return True.
         """
+        chain = ProjectParameterTable.dependency_chain()
+        data = next((x for x in chain if x.get("kind") == "project"), None)
+        if data and parameter.name in data.get("names", set()):
+            return False
+
         possibles = (DatabaseParameter
                      .select(DatabaseParameter.database)
                      .distinct())
@@ -405,9 +435,14 @@ class DataBaseParameterTable(BaseParameterTable):
     def parameter_is_deletable(parameter: DatabaseParameter) -> bool:
         """ Take a DatabaseParameter and determine if it can be deleted.
 
-        Iterate through all of the activity parameters, return False if any
-        of them use the parameter, otherwise return True.
+        Iterate through the database and activity parameters, return False if
+        any of them use the parameter, otherwise return True.
         """
+        chain = DatabaseParameter.dependency_chain(parameter.database)
+        data = next((x for x in chain if x.get("kind") == "database"), None)
+        if data and parameter.name in data.get("names", set()):
+            return False
+
         possibles = (ActivityParameter
                      .select(ActivityParameter.group)
                      .distinct())
