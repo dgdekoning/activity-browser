@@ -132,7 +132,8 @@ class BaseParameterTable(ABDataFrameEdit):
     def delete_parameter(self, proxy) -> None:
         param = self.get_parameter(proxy)
         if param:
-            param.delete_instance()
+            with bw.parameters.db.atomic():
+                param.delete_instance()
             df = self.build_df()
         else:
             # Remove the parameter before it is stored in the database
@@ -681,8 +682,8 @@ class ActivityParameterTable(BaseParameterTable):
                 deletable.add(row["group"])
 
         # Remove empty groups
-        query = Group.delete().where(Group.name.in_(deletable))
-        query.execute()
+        with bw.parameters.db.atomic():
+            Group.delete().where(Group.name << deletable).execute()
 
         # Recalculate everything and emit `parameters_changed` signal
         bw.parameters.recalculate()
