@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import brightway2 as bw
 from PyQt5.QtCore import pyqtSlot, QSize
 from PyQt5.QtWidgets import (QCheckBox, QHBoxLayout, QMessageBox, QPushButton,
                              QToolBar, QVBoxLayout, QTabWidget)
@@ -220,6 +221,11 @@ the activity in that group.</li>
         self.activity_table.sync(ActivityParameterTable.build_df())
         self.hide_uncertainty_columns()
         self.activity_order_column()
+        # Cannot create database parameters without databases
+        if not bw.databases:
+            self.new_database_param.setEnabled(False)
+        else:
+            self.new_database_param.setEnabled(True)
 
     @pyqtSlot()
     def hide_uncertainty_columns(self):
