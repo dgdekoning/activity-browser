@@ -12,7 +12,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox
 
-from activity_browser.app.bwutils.commontasks import clean_activity_name
+from activity_browser.app.bwutils import commontasks as bc
 from activity_browser.app.settings import project_settings
 from activity_browser.app.signals import signals
 
@@ -534,6 +534,8 @@ class ActivityParameterTable(BaseParameterTable):
         keys = [db_table.get_key(i) for i in db_table.selectedIndexes()]
         event.accept()
 
+        # Block signals from `signals` while iterating through dropped keys.
+        signals.blockSignals(True)
         for key in keys:
             act = bw.get_activity(key)
             if act.get("type", "process") != "process":
@@ -544,40 +546,43 @@ class ActivityParameterTable(BaseParameterTable):
                     )
                 )
                 continue
-            row = self._build_parameter(key)
-            self.dataframe = self.dataframe.append(row, ignore_index=True)
-
-        self.sync(self.dataframe)
-        self.new_parameter.emit()
+            self.add_simple_parameter(key)
+        signals.blockSignals(False)
+        signals.parameters_changed.emit()
 
     @pyqtSlot(tuple)
     def add_simple_parameter(self, key: tuple) -> None:
         """ Given the activity key, generate a new row with data from
         the activity and immediately call `new_activity_parameters`.
-
-        NOTE: This is a shortcut to sidestep the functioning of the model
         """
-        if key in self.dataframe["key"]:
-            return
-        row = self._build_parameter(key)
-        row["database"], row["code"] = key
-        del row["key"], row["parameter"]
+        act = bw.get_activity(key)
+        prep_name = bc.clean_activity_name(act.get("name"))
+        group = bc.build_activity_group_name(key, prep_name)
+        count = (ActivityParameter.select()
+                 .where(ActivityParameter.group == group).count())
+        row = {
+            "name": "{}_{}".format(prep_name, count + 1),
+            "amount": act.get("amount", 0.0),
+            "formula": act.get("formula", ""),
+            "database": key[0],
+            "code": key[1],
+        }
         # Save the new parameter immediately.
-        bw.parameters.new_activity_parameters([row], row["group"])
+        bw.parameters.new_activity_parameters([row], group)
         signals.parameters_changed.emit()
 
     @classmethod
     def _build_parameter(cls, key: tuple) -> dict:
+        """ @deprecated """
         act = bw.get_activity(key)
-
-        prep_name = act.get("reference product", "")
-        if prep_name == "":
-            prep_name = act.get("name")
-        prep_name = clean_activity_name(prep_name)
+        prep_name = bc.clean_activity_name(act.get("name"))
+        group = bc.build_activity_group_name(key, prep_name)
+        count = (ActivityParameter.select()
+                 .where(ActivityParameter.group == group).count())
 
         row = {
-            "group": "{}_group".format(prep_name),
-            "name": prep_name,
+            "group": group,
+            "name": "{}_{}".format(prep_name, count + 1),
             "amount": act.get("amount", 0.0),
             "formula": act.get("formula", ""),
             "order": "",
