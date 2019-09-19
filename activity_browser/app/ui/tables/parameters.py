@@ -42,19 +42,9 @@ class BaseParameterTable(ABDataFrameEdit):
         """ Handle updating the parameters whenever the user changes a value.
         """
         if topLeft == bottomRight and topLeft.isValid():
-            if self.get_parameter(topLeft) is None:
-                # (not) Dealing with a new parameter not yet saved to db.
-                return
-            error = self.edit_single_parameter(topLeft)
-            if error:
-                if error == QMessageBox.Discard:
-                    # Undo changes in the table.
-                    self.sync(self.build_df())
-                if error == QMessageBox.Cancel:
-                    # Leave incorrect value in the table.
-                    return
-        else:
-            super().dataChanged(topLeft, bottomRight, roles)
+            self.edit_single_parameter(topLeft)
+            return
+        super().dataChanged(topLeft, bottomRight, roles)
 
     @dataframe_sync
     def sync(self, df):
