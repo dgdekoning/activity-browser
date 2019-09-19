@@ -509,6 +509,7 @@ class ActivityParameterTable(BaseParameterTable):
     def _resize(self) -> None:
         super()._resize()
         self.setColumnHidden(self.param_column, True)
+        self.setColumnHidden(self.COLUMNS.index("group"), True)
 
     @classmethod
     def build_df(cls):
@@ -644,10 +645,10 @@ class ActivityParameterTable(BaseParameterTable):
     def open_activity_tab(self):
         """ Triggers the activity tab to open one or more activities.
         """
-        for index in self.selectedIndexes():
-            source_index = self.get_source_index(index)
-            row = self.dataframe.iloc[source_index.row(), ]
-            signals.open_activity_tab.emit(row["key"])
+        for proxy in self.selectedIndexes():
+            index = self.get_source_index(proxy)
+            key = self.model.index(index.row(), self.COLUMNS.index("key")).data()
+            signals.open_activity_tab.emit(literal_eval(key))
 
     def save_parameters(self, overwrite: bool = True) -> Optional[int]:
         """ Separates the activity parameters by group name and saves each
