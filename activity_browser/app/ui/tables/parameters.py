@@ -519,7 +519,8 @@ class ActivityParameterTable(BaseParameterTable):
             cls.parse_parameter(p)
             for p in (ActivityParameter
                       .select(ActivityParameter, Group.order)
-                      .join(Group, on=(ActivityParameter.group == Group.name)).dicts())
+                      .join(Group, on=(ActivityParameter.group == Group.name))
+                      .namedtuples())
         ]
         df = pd.DataFrame(data, columns=cls.combine_columns())
         # Convert the 'order' column from list into string
@@ -528,17 +529,15 @@ class ActivityParameterTable(BaseParameterTable):
 
     @classmethod
     def parse_parameter(cls, parameter) -> dict:
-        """ Override the base method to instead use dictionaries.
+        """ Override the base method to add more steps.
         """
-        row = {key: parameter.get(key, "") for key in cls.COLUMNS}
+        row = super().parse_parameter(parameter)
         # Combine the 'database' and 'code' fields of the parameter into a 'key'
-        row["key"] = (parameter.get("database"), parameter.get("code"))
+        row["key"] = (parameter.database, parameter.code)
         act = bw.get_activity(row["key"])
         row["activity"] = act.get("name")
-        data = parameter.get("data", {})
-        row.update(cls.extract_uncertainty_data(data))
-        # Cheating because we have the ID of the ActivityParameter
-        row["parameter"] = ActivityParameter.get_by_id(parameter["id"])
+        # Replace the namedtuple with the actual ActivityParameter
+        row["parameter"] = ActivityParameter.get_by_id(parameter.id)
         return row
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
