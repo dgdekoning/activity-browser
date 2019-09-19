@@ -446,7 +446,7 @@ class ActivityParameterTable(BaseParameterTable):
         self._connect_signals()
 
     def _connect_signals(self):
-        signals.add_activity_parameter.connect(self.add_simple_parameter)
+        signals.add_activity_parameter.connect(self.add_parameter)
 
     def _resize(self) -> None:
         super()._resize()
@@ -519,12 +519,12 @@ class ActivityParameterTable(BaseParameterTable):
                     )
                 )
                 continue
-            self.add_simple_parameter(key)
+            self.add_parameter(key)
         signals.blockSignals(False)
         signals.parameters_changed.emit()
 
     @pyqtSlot(tuple)
-    def add_simple_parameter(self, key: tuple) -> None:
+    def add_parameter(self, key: tuple) -> None:
         """ Given the activity key, generate a new row with data from
         the activity and immediately call `new_activity_parameters`.
         """
@@ -557,7 +557,7 @@ class ActivityParameterTable(BaseParameterTable):
             qicons.delete, "Remove parameter(s)", self.delete_parameters
         )
         menu.addAction(
-            qicons.delete, "Remove order from group(s)", self.unset_group_order
+            qicons.delete, "Remove order activity group", self.unset_group_order
         )
         menu.exec(event.globalPos())
 
@@ -584,6 +584,7 @@ class ActivityParameterTable(BaseParameterTable):
             order.remove(param.group)
         group = Group.get(name=param.group)
         group.order = order
+        group.fresh = False
         group.save()
 
     @pyqtSlot()
@@ -685,6 +686,7 @@ class ActivityParameterTable(BaseParameterTable):
         field = self.model.headerData(proxy.column(), Qt.Horizontal)
         if field == "order":
             self.store_group_order(proxy)
+            bw.parameters.recalculate()
             signals.parameters_changed.emit()
         else:
             super().edit_single_parameter(proxy)
