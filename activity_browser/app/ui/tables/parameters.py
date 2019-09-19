@@ -12,6 +12,7 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox
 
+from activity_browser.app.bwutils.commontasks import clean_activity_name
 from activity_browser.app.settings import project_settings
 from activity_browser.app.signals import signals
 
@@ -564,7 +565,7 @@ class ActivityParameterTable(BaseParameterTable):
         prep_name = act.get("reference product", "")
         if prep_name == "":
             prep_name = act.get("name")
-        prep_name = cls.clean_parameter_name(prep_name)
+        prep_name = clean_activity_name(prep_name)
 
         row = {
             "group": "{}_group".format(prep_name),
@@ -577,24 +578,6 @@ class ActivityParameterTable(BaseParameterTable):
         }
         row.update({key: None for key in cls.UNCERTAINTY})
         return row
-
-    @staticmethod
-    def clean_parameter_name(param_name: str) -> str:
-        """ Takes a given parameter name and remove or replace all characters
-        not allowed to be in there.
-
-        These are ' -,.%[]' and all integers
-        """
-        remove = ",.%[]0123456789"
-        replace = " -"
-        for char in remove:
-            if char in param_name:
-                param_name = param_name.replace(char, "")
-        for char in replace:
-            if char in param_name:
-                param_name = param_name.replace(char, "_")
-
-        return param_name
 
     def contextMenuEvent(self, event: QContextMenuEvent):
         """ Override and activate QTableView.contextMenuEvent()
