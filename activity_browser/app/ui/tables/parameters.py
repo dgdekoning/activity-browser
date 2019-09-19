@@ -713,6 +713,18 @@ class ActivityParameterTable(BaseParameterTable):
                 "Multiple different orders given for group {}".format(group_name)
             )
 
+    def store_group_order(self, proxy) -> None:
+        """ Store the given order in the Group used by the parameter linked
+        in the proxy.
+        """
+        param = self.get_parameter(proxy)
+        order = proxy.data()
+        if param.group in order:
+            order.remove(param.group)
+        group = Group.get(name=param.group)
+        group.order = order
+        group.save()
+
     @pyqtSlot()
     def delete_parameters(self) -> None:
         """ Handle event to delete the given activities and related exchanges.
@@ -804,6 +816,17 @@ class ActivityParameterTable(BaseParameterTable):
         index = self.get_source_index(self.currentIndex())
         key = self.model.index(index.row(), self.COLUMNS.index("key")).data()
         return literal_eval(key)
+
+    def edit_single_parameter(self, proxy) -> None:
+        """ Override the base method because `order` is stored in Group,
+        not in Activity.
+        """
+        field = self.model.headerData(proxy.column(), Qt.Horizontal)
+        if field == "order":
+            self.store_group_order(proxy)
+            signals.parameters_changed.emit()
+        else:
+            super().edit_single_parameter(proxy)
 
 
 class ExchangesTable(ABDictTreeView):
