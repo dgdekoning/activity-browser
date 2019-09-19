@@ -112,22 +112,24 @@ class BaseParameterTable(ABDataFrameEdit):
         """
         return "", ""
 
-    def edit_single_parameter(self, proxy) -> Optional[int]:
+    def edit_single_parameter(self, proxy) -> None:
         """ Take the proxy index and update the underlying brightway Parameter.
-
-        Note that this method expects the parameter to exist, and will
-        raise an error if this is not the case.
         """
         param = self.get_parameter(proxy)
-        try:
-            field = self.model.headerData(proxy.column(), Qt.Horizontal)
-            setattr(param, field, proxy.data())
-            param.save()
-            # Saving the parameter expires the related group, so recalculate.
-            bw.parameters.recalculate()
-            signals.parameters_changed.emit()
-        except Exception as e:
-            return parameter_save_errorbox(self, e)
+        with bw.parameters.db.atomic() as transaction:
+            try:
+                field = self.model.headerData(proxy.column(), Qt.Horizontal)
+                setattr(param, field, proxy.data())
+                param.save()
+                # Saving the parameter expires the related group, so recalculate.
+                bw.parameters.recalculate()
+                signals.parameters_changed.emit()
+            except Exception as e:
+                # Anything wrong? Roll the transaction back, rebuild the table
+                # and throw up a warning message.
+                transaction.rollback()
+                self.sync(self.build_df())
+                simple_warning_box(self, "Could not save changes", str(e))
 
     def delete_parameter(self, proxy) -> None:
         param = self.get_parameter(proxy)
