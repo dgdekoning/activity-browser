@@ -4,11 +4,10 @@ from typing import Optional
 
 from asteval import Interpreter
 import brightway2 as bw
-import numpy as np
 import pandas as pd
 from bw2data.parameters import (ActivityParameter, DatabaseParameter, Group,
                                 ProjectParameter, get_new_symbols)
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox
 
@@ -32,7 +31,6 @@ class BaseParameterTable(ABDataFrameEdit):
     UNCERTAINTY = [
         "uncertainty type", "loc", "scale", "shape", "minimum", "maximum"
     ]
-    new_parameter = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
