@@ -70,15 +70,15 @@ def test_delete_project_param(qtbot):
     table.sync(table.build_df())
 
     # The 2nd parameter cannot be deleted
-    proxy = table.proxy_model.index(1, 0)
-    assert not table.parameter_is_deletable(table.get_parameter(proxy))
+    param = table.get_parameter(table.proxy_model.index(1, 0))
+    assert not table.parameter_is_deletable(param)
 
     # Delete the 3rd parameter, removing the dependency
     table.delete_parameter(table.proxy_model.index(2, 0))
 
     # 2nd parameter can now be deleted, so delete it.
-    assert table.parameter_is_deletable(table.get_parameter(proxy))
-    table.delete_parameter(proxy)
+    assert table.parameter_is_deletable(param)
+    table.delete_parameter(table.proxy_model.index(1, 0))
 
 
 def test_create_database_params(qtbot):
