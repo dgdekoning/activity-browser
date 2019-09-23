@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
-from bw2data.parameters import DatabaseParameter, ProjectParameter
+from bw2data.parameters import (ActivityParameter, DatabaseParameter,
+                                ProjectParameter)
 from PyQt5 import QtCore
 
 from activity_browser.app.signals import signals
-from activity_browser.app.ui.tables.parameters import (DataBaseParameterTable,
-                                                       ProjectParameterTable)
+from activity_browser.app.ui.tables.parameters import (
+    ActivityParameterTable, DataBaseParameterTable, ProjectParameterTable
+)
 from activity_browser.app.ui.tabs.parameters import ParameterDefinitionTab
 
 
@@ -164,3 +166,53 @@ def test_downstream_dependency(qtbot):
     # First parameter of the project table is used by the database parameter
     param = table.get_parameter(table.proxy_model.index(0, 0))
     assert not table.parameter_is_deletable(param)
+
+
+def test_create_activity_param(qtbot):
+    """ Create several activity parameters.
+
+    TODO: Figure out some way of performing a drag action between tables.
+     Use method calls for now.
+     Until the above is implemented, take shortcuts and don't check db validity
+    """
+    project_db_tab = ParameterDefinitionTab()
+    qtbot.addWidget(project_db_tab)
+    project_db_tab.build_tables()
+    table = project_db_tab.activity_table
+
+    # Create multiple parameters for a single activity
+    act_key = ("testdb", "act1")
+    for _ in range(3):
+        table.add_parameter(act_key)
+
+    # Test created parameters
+    assert ActivityParameter.select().count() == 3
+    # First of the multiple parameters
+    assert table.proxy_model.index(0, 0).data() == "act_1"
+    # Second of the multiple parameters
+    assert table.proxy_model.index(1, 0).data() == "act_2"
+    # The group name for the `testdb` parameters is the same.
+    loc = table.visualRect(table.proxy_model.index(0, 0))
+    qtbot.mouseClick(table.viewport(), QtCore.Qt.LeftButton, pos=loc.center())
+    group = table.get_current_group()
+    assert table.proxy_model.index(2, table.COLUMNS.index("group")).data() == group
+
+
+def test_edit_activity_param(qtbot):
+    """ Alter names, amounts and formulas.
+
+    Introduce dependencies through formulas
+    """
+    table = ActivityParameterTable()
+    qtbot.addWidget(table)
+    table.sync(table.build_df())
+
+    # Fill rows with new variables
+    table.model.setData(table.model.index(0, 0), "edit_act_1")
+    table.model.setData(table.model.index(0, 2), "test_db3 * 3")
+    table.model.setData(table.model.index(1, 0), "edit_act_2")
+    table.model.setData(table.model.index(1, 2), "edit_act_1 - 3")
+
+    # Test updated values
+    assert ActivityParameter.get(name="edit_act_1").amount == 25.5
+    assert ActivityParameter.get(name="edit_act_2").amount == 22.5
