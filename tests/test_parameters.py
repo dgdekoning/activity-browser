@@ -96,14 +96,19 @@ def test_create_database_params(qtbot):
     project_db_tab.build_tables()
     table = project_db_tab.database_table
 
-    with qtbot.waitSignals([signals.parameters_changed, signals.parameters_changed], timeout=1000):
+    signal_list = [
+        signals.parameters_changed, signals.parameters_changed,
+        signals.parameters_changed
+    ]
+    with qtbot.waitSignals(signal_list, timeout=1000):
+        qtbot.mouseClick(project_db_tab.new_database_param, QtCore.Qt.LeftButton)
         qtbot.mouseClick(project_db_tab.new_database_param, QtCore.Qt.LeftButton)
         qtbot.mouseClick(project_db_tab.new_database_param, QtCore.Qt.LeftButton)
 
     # First created parameter is named 'param_2'
     assert table.model.index(0, 0).data() == "param_2"
-    assert table.rowCount() == 2
-    assert DatabaseParameter.select().count() == 2
+    assert table.rowCount() == 3
+    assert DatabaseParameter.select().count() == 3
 
 
 def test_edit_database_params(qtbot):
@@ -116,26 +121,35 @@ def test_edit_database_params(qtbot):
     table.model.setData(table.model.index(0, 2), "test_project + 3.5")
     table.model.setData(table.model.index(1, 0), "test_db2")
     table.model.setData(table.model.index(1, 2), "test_db1 ** 2")
+    table.model.setData(table.model.index(2, 0), "test_db3")
+    table.model.setData(table.model.index(2, 1), "8.5")
+    table.model.setData(table.model.index(2, 3), "testdb")
 
     # 5 + 3.5 = 8.5 -> 8.5 ** 2 = 72.25
     assert DatabaseParameter.get(name="test_db2").amount == 72.25
+    # There are two parameters for `biosphere3` and one for `testdb`
+    assert (DatabaseParameter.select()
+            .where(DatabaseParameter.database == "biosphere3").count()) == 2
+    assert (DatabaseParameter.select()
+            .where(DatabaseParameter.database == "testdb").count()) == 1
 
 
 def test_delete_database_params(qtbot):
     """ Attempt to delete a parameter.
     """
-    table = DataBaseParameterTable()
-    qtbot.addWidget(table)
-    table.sync(table.build_df())
+    project_db_tab = ParameterDefinitionTab()
+    qtbot.addWidget(project_db_tab)
+    project_db_tab.build_tables()
+    table = project_db_tab.database_table
 
     # Check that we can delete the parameter and remove it.
     proxy = table.proxy_model.index(1, 0)
     assert table.parameter_is_deletable(table.get_parameter(proxy))
     table.delete_parameter(proxy)
 
-    # Now we have just one row left
-    assert table.rowCount() == 1
-    assert DatabaseParameter.select().count() == 1
+    # Now we have two rows left
+    assert table.rowCount() == 2
+    assert DatabaseParameter.select().count() == 2
 
 
 def test_downstream_dependency(qtbot):
