@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
-from bw2data.parameters import (ActivityParameter, DatabaseParameter,
+from bw2data.parameters import (ActivityParameter, DatabaseParameter, Group,
                                 ProjectParameter)
 from PyQt5 import QtCore
 
@@ -216,3 +216,52 @@ def test_edit_activity_param(qtbot):
     # Test updated values
     assert ActivityParameter.get(name="edit_act_1").amount == 25.5
     assert ActivityParameter.get(name="edit_act_2").amount == 22.5
+
+
+def test_open_activity_tab(qtbot, ab_app):
+    """ Trigger an 'open tab and switch to' action for a parameter.
+    """
+    # First, look at the parameters tab
+    panel = ab_app.main_window.right_panel
+    param_tab = panel.tabs["Parameters"]
+    activities_tab = panel.tabs["Activities"]
+    ab_app.main_window.right_panel.select_tab(param_tab)
+
+    # Select an activity
+    tab = param_tab.tabs["Definitions"]
+    table = tab.activity_table
+    rect = table.visualRect(table.proxy_model.index(0, 3))
+    qtbot.mouseClick(table.viewport(), QtCore.Qt.LeftButton, pos=rect.center())
+
+    parameter_index = panel.currentIndex()
+
+    # Trigger the tab to open
+    table.open_activity_tab()
+
+    # We should now be looking at the activity tab
+    assert panel.currentIndex() != parameter_index
+    assert panel.currentIndex() == panel.indexOf(activities_tab)
+
+
+def test_delete_activity_param(qtbot):
+    """ Remove activity parameters.
+    """
+    project_db_tab = ParameterDefinitionTab()
+    qtbot.addWidget(project_db_tab)
+    project_db_tab.build_tables()
+    table = project_db_tab.activity_table
+
+    rect = table.visualRect(table.proxy_model.index(0, 0))
+    qtbot.mouseClick(table.viewport(), QtCore.Qt.LeftButton, pos=rect.center())
+
+    group = table.get_current_group()
+
+    # Now delete the parameter for the selected row.
+    table.delete_parameters()
+
+    # Surprise, this deletes all the parameters, because they are all from the
+    # same activity.
+    assert table.rowCount() == 0
+    assert ActivityParameter.select().count() == 0
+    # Note, this also removes the Group for those parameters.
+    assert Group.get_or_none(name=group) is None
