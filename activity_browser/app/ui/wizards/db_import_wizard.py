@@ -266,7 +266,7 @@ class ConfirmationPage(QtWidgets.QWizardPage):
         super().__init__(parent)
         self.wizard = self.parent()
         self.setCommitPage(True)
-        self.setButtonText(2, 'Import Database')
+        self.setButtonText(QtWidgets.QWizard.CommitButton, 'Import Database')
         self.current_project_label = QtWidgets.QLabel('empty')
         self.db_name_label = QtWidgets.QLabel('empty')
         self.path_label = QtWidgets.QLabel('empty')
