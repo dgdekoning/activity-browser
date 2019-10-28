@@ -2,7 +2,7 @@
 import sys
 import traceback
 
-from PyQt5 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore
 
 from .application import Application
 from .ui.style import default_font

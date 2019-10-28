@@ -2,8 +2,8 @@
 from os import devnull
 
 from asteval import Interpreter
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import Signal, Slot
 
 from ...icons import qicons
 from ...wizards import ParameterWizard
