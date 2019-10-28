@@ -2,7 +2,6 @@
 import brightway2 as bw
 import pandas as pd
 from PySide2.QtCore import Slot
-from PySide2.QtGui import QCursor
 from PySide2.QtWidgets import QAbstractItemView, QMenu
 
 from activity_browser.app.bwutils.commontasks import bw_keys_to_AB_names
@@ -44,8 +43,7 @@ class ActivitiesHistoryTable(ABDataFrameView):
         menu.addAction(
             qicons.right, "Open in new tab", self.open_tab
         )
-        menu.popup(QCursor.pos())
-        menu.exec()
+        menu.exec_(a0.globalPos())
 
     @Slot()
     def open_tab(self):
