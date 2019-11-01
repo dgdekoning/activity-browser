@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
-from PyQt5.QtCore import pyqtSlot, QSize
+from PyQt5 import QtCore, QtWidgets
+from PyQt5.QtCore import pyqtSlot, QSize, Qt
 from PyQt5.QtWidgets import (QCheckBox, QHBoxLayout, QPushButton, QToolBar,
                              QVBoxLayout, QTabWidget)
 
 from activity_browser.app.signals import signals
 
+from ...bwutils import presamples as ps
 from ..icons import qicons
 from ..style import header, horizontal_line
 from ..tables import (ActivityParameterTable, DataBaseParameterTable,
@@ -27,6 +29,7 @@ class ParametersTab(QTabWidget):
         self.tabs = {
             "Definitions": ParameterDefinitionTab(self),
             "Exchanges": ParameterExchangesTab(self),
+            "Scenarios": PresamplesTab(self),
         }
         for name, tab in self.tabs.items():
             self.addTab(tab, name)
@@ -253,3 +256,68 @@ for the full explanation.</p>
         """ Read parameters from brightway and build tree tables
         """
         self.table.sync()
+
+
+class PresamplesTab(BaseRightTab):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.btn = QPushButton(qicons.load_db, "Get me that data")
+        self.testbtn = QPushButton(qicons.debug, "Testification")
+        self.tbl = QtWidgets.QTableWidget(self)
+
+        self._construct_layout()
+        self._connect_signals()
+
+        self.explain_text = """Textificate"""
+
+    def _connect_signals(self):
+        self.btn.clicked.connect(self.select_read_file)
+        self.testbtn.clicked.connect(self.testing)
+
+    def _construct_layout(self):
+        layout = QVBoxLayout()
+        row = QHBoxLayout()
+        row.addWidget(self.btn)
+        layout.addLayout(row)
+        layout.addWidget(self.tbl)
+        row = QHBoxLayout()
+        row.addWidget(self.testbtn)
+        layout.addLayout(row)
+        layout.addStretch(1)
+        self.setLayout(layout)
+
+    def select_read_file(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, 'Select prepared scenario file')
+        if path:
+            df = ps.read_prepared_file_with_header(path)
+            self.tbl.clear()
+            self.tbl.setColumnCount(df.shape[1] - 1)
+            self.tbl.setRowCount(df.shape[0])
+            self.tbl.setHorizontalHeaderLabels(df.columns[1:])
+            self.tbl.setVerticalHeaderLabels(df["Name"])
+            df = df.drop(["Name"], axis=1)
+            for x, row in enumerate(df.itertuples(index=False)):
+                for y, col in enumerate(row):
+                    item = QtWidgets.QTableWidgetItem(col)
+                    if y == 0:
+                        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                    self.tbl.setItem(x, y, item)
+
+    def testing(self):
+        from bw2data.parameters import ProjectParameter, ActivityParameter
+        ppm = ps.PresamplesParameterManager()
+        d = ProjectParameter.select()
+        e = list(ppm.process_project_parameters(d))
+        print(e)
+        f = [1, 7, 4, 7, 3]
+        e = list(ppm.replace_amounts(e, f))
+        print(e)
+        ps.ppm.param_values = e
+        results = ppm.recalculate_project_parameters()
+        print(results)
+        for p in ActivityParameter.select():
+            print(f"name: {p.name}, group: {p.group}, amount: {p.amount}")
+            rec = ppm.recalculate_activity_parameters(p.group, results)
+            print(rec)
