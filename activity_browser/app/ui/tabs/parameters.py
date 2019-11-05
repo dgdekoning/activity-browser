@@ -11,7 +11,8 @@ from ...bwutils import presamples as ps
 from ..icons import qicons
 from ..style import header, horizontal_line
 from ..tables import (ActivityParameterTable, DataBaseParameterTable,
-                      ExchangesTable, ProjectParameterTable)
+                      ExchangesTable, ProjectParameterTable,
+                      ScenarioTable)
 from .base import BaseRightTab
 
 
@@ -264,7 +265,8 @@ class PresamplesTab(BaseRightTab):
 
         self.btn = QPushButton(qicons.load_db, "Get me that data")
         self.testbtn = QPushButton(qicons.debug, "Testification")
-        self.tbl = QtWidgets.QTableWidget(self)
+        self.tbl = ScenarioTable(self)
+        self.tbl.sync()
 
         self._construct_layout()
         self._connect_signals()
@@ -292,18 +294,7 @@ class PresamplesTab(BaseRightTab):
             self, 'Select prepared scenario file')
         if path:
             df = ps.read_prepared_file_with_header(path)
-            self.tbl.clear()
-            self.tbl.setColumnCount(df.shape[1] - 1)
-            self.tbl.setRowCount(df.shape[0])
-            self.tbl.setHorizontalHeaderLabels(df.columns[1:])
-            self.tbl.setVerticalHeaderLabels(df["Name"])
-            df = df.drop(["Name"], axis=1)
-            for x, row in enumerate(df.itertuples(index=False)):
-                for y, col in enumerate(row):
-                    item = QtWidgets.QTableWidgetItem(col)
-                    if y == 0:
-                        item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                    self.tbl.setItem(x, y, item)
+            self.tbl.sync(df=df)
 
     def testing(self):
         from bw2data.parameters import ProjectParameter, ActivityParameter
