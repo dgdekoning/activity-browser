@@ -300,7 +300,7 @@ class TechnosphereExchangeTable(BaseExchangeTable):
             "Activity": adj_act.get("name"),
             "Location": adj_act.get("location", "Unknown"),
             "Database": adj_act.get("database"),
-            "Uncertainty": adj_act.get("uncertainty type", 0),
+            "Uncertainty": exchange.get("uncertainty type", 0),
             "Formula": exchange.get("formula"),
         })
         return row, adj_act
@@ -351,7 +351,7 @@ class BiosphereExchangeTable(BaseExchangeTable):
             "Flow Name": adj_act.get("name"),
             "Compartments": " - ".join(adj_act.get('categories', [])),
             "Database": adj_act.get("database"),
-            "Uncertainty": adj_act.get("uncertainty type", 0),
+            "Uncertainty": exchange.get("uncertainty type", 0),
             "Formula": exchange.get("formula"),
         })
         return row, adj_act
