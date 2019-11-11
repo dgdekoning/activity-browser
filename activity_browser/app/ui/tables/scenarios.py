@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import itertools
+from typing import Iterable, Tuple
 
 from bw2data.parameters import ActivityParameter, DatabaseParameter, ProjectParameter
 import pandas as pd
 
-from ...bwutils.presamples import ppm
+from ...bwutils.presamples import PresamplesParameterManager
 from .delegates import FloatDelegate, ViewOnlyDelegate
 from .views import ABDataFrameEdit, dataframe_sync
 
@@ -35,9 +36,26 @@ class ScenarioTable(ABDataFrameEdit):
             self.dataframe = df.set_index("Name")
             return
         data = itertools.chain(
-            ppm.process_project_parameters(ProjectParameter.select()),
-            ppm.process_database_parameters(DatabaseParameter.select()),
-            ppm.process_activity_parameters(ActivityParameter.select())
+            PresamplesParameterManager.process_project_parameters(ProjectParameter.select()),
+            PresamplesParameterManager.process_database_parameters(DatabaseParameter.select()),
+            PresamplesParameterManager.process_activity_parameters(ActivityParameter.select())
         )
         self.dataframe = pd.DataFrame(data, columns=["Name", "Group", "default"])
         self.dataframe.set_index("Name", inplace=True)
+
+    def get_scenario_columns(self) -> Iterable[str]:
+        return self.dataframe.columns[1:]
+
+    def iterate_scenarios(self) -> Iterable[Tuple[str, Iterable]]:
+        """ Iterates through all of the non-description columns from left to right.
+
+        Returns an iterator of tuples containing the scenario name and a dictionary
+        of the parameter names and new amounts.
+
+        TODO: Fix this so it returns the least amount of required information.
+        """
+        return (
+            (scenario, self.dataframe[scenario])
+            for scenario in self.get_scenario_columns()
+        )
+

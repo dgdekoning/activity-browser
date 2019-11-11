@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
 from PySide2.QtCore import Slot, QSize
-from PySide2.QtWidgets import (QCheckBox, QHBoxLayout, QPushButton, QToolBar,
-                                QVBoxLayout, QTabWidget)
-
-from activity_browser.app.signals import signals
+from PySide2.QtWidgets import (QCheckBox, QFileDialog, QHBoxLayout, QPushButton,
+                               QToolBar, QVBoxLayout, QTabWidget, QStyle)
 
 from ...bwutils import presamples as ps
+from ...settings import project_settings
+from ...signals import signals
 from ..icons import qicons
 from ..style import header, horizontal_line
 from ..tables import (ActivityParameterTable, DataBaseParameterTable,
@@ -289,11 +289,20 @@ class PresamplesTab(BaseRightTab):
         self.setLayout(layout)
 
     def select_read_file(self):
-        path, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, 'Select prepared scenario file')
+        path, _ = QFileDialog.getOpenFileName(
+            parent=self, caption="Select prepared scenario file")
         if path:
-            df = ps.read_prepared_file_with_header(path)
+            df = ps.load_scenarios_from_file(path)
             self.tbl.sync(df=df)
+
+    def save_scenarios(self):
+        filename, _ = QFileDialog.getSaveFileName(
+            parent=self, caption="Save current scenarios to CSV",
+            dir=project_settings.data_dir, filter=self.tbl.CSV_FILTER
+        )
+        if filename:
+            print(self.tbl.dataframe)
+            ps.save_scenarios_to_file(self.tbl.dataframe, filename)
 
     def testing(self):
         from bw2data.parameters import ProjectParameter, ActivityParameter

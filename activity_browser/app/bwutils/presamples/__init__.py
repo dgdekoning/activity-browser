@@ -4,9 +4,10 @@ import pandas as pd
 from .manager import PresamplesParameterManager
 
 
-def read_prepared_file_with_header(path: str) -> pd.DataFrame:
+def load_scenarios_from_file(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
     return df
 
 
-ppm = PresamplesParameterManager()
+def save_scenarios_to_file(data: pd.DataFrame, path: str) -> None:
+    data.to_csv(path_or_buf=path)
