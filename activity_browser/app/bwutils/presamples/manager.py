@@ -17,11 +17,6 @@ import presamples as ps
 class PresamplesParameterManager(object):
     """ Used to recalculate brightway parameters without editing the database
 
-    The methods `process_project_parameters`, `process_database_parameters`,
-    `process_activity_parameters` and `replace_amounts` are specifically
-    used to convert the brightway parameters to simple tuples with only
-    the relevant information needed for recalculation.
-
     The `param_values` property and `get_altered_values` method are used to
     retrieve either the whole list of prepared parameter values or a
     subset of it selected by group.
@@ -54,33 +49,6 @@ class PresamplesParameterManager(object):
         """
         return {k: v for k, g, v in self.param_values if g == group}
 
-    @staticmethod
-    def process_project_parameters(parameters: Iterable[ProjectParameter]) -> Iterable[tuple]:
-        """ Converts ActivityParameters into tuples of the relevant values.
-        """
-        return ((p.name, "project", p.amount) for p in parameters)
-
-    @staticmethod
-    def process_database_parameters(parameters: Iterable[DatabaseParameter]) -> Iterable[tuple]:
-        """ Converts ActivityParameters into tuples of the relevant values.
-        """
-        return ((p.name, p.database, p.amount) for p in parameters)
-
-    @staticmethod
-    def process_activity_parameters(parameters: Iterable[ActivityParameter]) -> Iterable[tuple]:
-        """ Converts ActivityParameters into tuples of the relevant values.
-        """
-        return ((p.name, p.group, p.amount) for p in parameters)
-
-    @staticmethod
-    def replace_amounts(parameters: Iterable[tuple], amounts: Iterable[float]) -> Iterable[tuple]:
-        """ Specifically does not check for the length of both values to
-        allow the use of generators.
-        """
-        return (
-            (n, g, amount) for ((n, g, _), amount) in zip(parameters, amounts)
-        )
-
     @classmethod
     def construct(cls, scenario_values: Iterable[float] = None) -> 'PresamplesParameterManager':
         """ Construct an instance of itself and populate it with either the
@@ -89,17 +57,13 @@ class PresamplesParameterManager(object):
         If altered values are given, demands that the amount of values
         is equal to the amount of parameters.
         """
-        param_list = list(itertools.chain(
-            cls.process_project_parameters(ProjectParameter.select()),
-            cls.process_database_parameters(DatabaseParameter.select()),
-            cls.process_activity_parameters(ActivityParameter.select())
-        ))
+        param_list = list(process_brightway_parameters())
 
         ppm = cls()
         if scenario_values:
             scenario = list(scenario_values)
             assert len(param_list) == len(scenario)
-            ppm.param_values = cls.replace_amounts(param_list, scenario)
+            ppm.param_values = replace_amounts(param_list, scenario)
         else:
             ppm.param_values = param_list
         return ppm
@@ -200,7 +164,7 @@ class PresamplesParameterManager(object):
         All parameter types are recalculated in turn before interpreting the
         ParameterizedExchange formulas into amounts.
         """
-        self.param_values = self.replace_amounts(self.param_values, scenario_values)
+        self.param_values = replace_amounts(self.param_values, scenario_values)
         global_project = self.recalculate_project_parameters()
         all_db = {}
         for p in DatabaseParameter.select(DatabaseParameter.database).distinct():
@@ -249,3 +213,23 @@ class PresamplesParameterManager(object):
         arrays = ps.split_inventory_presamples(samples, indices)
         ps_id, ps_path = ps.create_presamples_package(matrix_data=arrays, seed="sequential")
         return ps_id, ps_path
+
+
+def process_brightway_parameters() -> Iterable[tuple]:
+    """ Converts brightway parameters of all types into a simple structure
+    in order of possible dependency.
+    """
+    return itertools.chain(
+        ((p.name, "project", p.amount) for p in ProjectParameter.select()),
+        ((p.name, p.database, p.amount) for p in DatabaseParameter.select()),
+        ((p.name, p.group, p.amount) for p in ActivityParameter.select())
+    )
+
+
+def replace_amounts(parameters: Iterable[tuple], amounts: Iterable[float]) -> Iterable[tuple]:
+    """ Specifically does not check for the length of both values to
+    allow the use of generators.
+    """
+    return (
+        (n, g, amount) for ((n, g, _), amount) in zip(parameters, amounts)
+    )

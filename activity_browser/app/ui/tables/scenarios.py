@@ -2,10 +2,9 @@
 import itertools
 from typing import Iterable, Tuple
 
-from bw2data.parameters import ActivityParameter, DatabaseParameter, ProjectParameter
 import pandas as pd
 
-from ...bwutils.presamples import PresamplesParameterManager
+from ...bwutils.presamples import process_brightway_parameters
 from .delegates import FloatDelegate, ViewOnlyDelegate
 from .views import ABDataFrameEdit, dataframe_sync
 
@@ -35,11 +34,7 @@ class ScenarioTable(ABDataFrameEdit):
             assert df.columns.get_loc("Group") == 1
             self.dataframe = df.set_index("Name")
             return
-        data = itertools.chain(
-            PresamplesParameterManager.process_project_parameters(ProjectParameter.select()),
-            PresamplesParameterManager.process_database_parameters(DatabaseParameter.select()),
-            PresamplesParameterManager.process_activity_parameters(ActivityParameter.select())
-        )
+        data = process_brightway_parameters()
         self.dataframe = pd.DataFrame(data, columns=["Name", "Group", "default"])
         self.dataframe.set_index("Name", inplace=True)
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
 
-from .manager import PresamplesParameterManager
+from .manager import PresamplesParameterManager, process_brightway_parameters
 
 
 def load_scenarios_from_file(path: str) -> pd.DataFrame:
