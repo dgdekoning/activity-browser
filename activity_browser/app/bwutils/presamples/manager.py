@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from typing import List, Optional, Iterable
+import itertools
+from typing import Iterable, List, Optional, Tuple
 
 from bw2data.parameters import (ActivityParameter, DatabaseParameter,
                                 ProjectParameter, get_new_symbols)
@@ -73,6 +74,29 @@ class PresamplesParameterManager(object):
         return (
             (n, g, amount) for ((n, g, _), amount) in zip(parameters, amounts)
         )
+
+    @classmethod
+    def construct(cls, scenario_values: Iterable[float] = None) -> 'PresamplesParameterManager':
+        """ Construct an instance of itself and populate it with either the
+        default parameter values or altered values.
+
+        If altered values are given, demands that the amount of values
+        is equal to the amount of parameters.
+        """
+        param_list = list(itertools.chain(
+            cls.process_project_parameters(ProjectParameter.select()),
+            cls.process_database_parameters(DatabaseParameter.select()),
+            cls.process_activity_parameters(ActivityParameter.select())
+        ))
+
+        ppm = cls()
+        if scenario_values:
+            scenario = list(scenario_values)
+            assert len(param_list) == len(scenario)
+            ppm.param_values = cls.replace_amounts(param_list, scenario)
+        else:
+            ppm.param_values = param_list
+        return ppm
 
     @staticmethod
     def _static(data: dict, needed: set) -> dict:
