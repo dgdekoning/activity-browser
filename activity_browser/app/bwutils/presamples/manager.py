@@ -2,10 +2,16 @@
 import itertools
 from typing import Iterable, List, Optional, Tuple
 
+from asteval import Interpreter
+import brightway2 as bw
+from bw2data.backends.peewee import ExchangeDataset
 from bw2data.parameters import (ActivityParameter, DatabaseParameter,
-                                ProjectParameter, get_new_symbols)
+                                ParameterizedExchange, ProjectParameter,
+                                get_new_symbols)
 from bw2parameters import ParameterSet
 from bw2parameters.errors import MissingName
+import numpy as np
+import presamples as ps
 
 
 class PresamplesParameterManager(object):
@@ -168,3 +174,78 @@ class PresamplesParameterManager(object):
 
         ParameterSet(data, glo).evaluate_and_set_amount_field()
         return self._prune_result_data(data)
+
+    @staticmethod
+    def recalculate_exchanges(group: str, global_params: dict = None) -> List[Tuple[int, float]]:
+        """ Constructs a list of exc.id/amount tuples for the
+        ParameterizedExchanges in the given group.
+        """
+        if global_params is None:
+            global_params = {}
+
+        params = (ParameterizedExchange.select()
+                  .where(ParameterizedExchange.group == group))
+
+        if not params.exists():
+            return []
+
+        interpreter = Interpreter()
+        interpreter.symtable.update(global_params)
+        return [(p.exchange, interpreter(p.formula)) for p in params]
+
+    def recalculate_scenario(self, scenario_values: Iterable[float]) -> (np.ndarray, np.ndarray):
+        """ Convenience function that takes new parameter values and returns
+        a fully-formed set of exchange amounts and indices.
+
+        All parameter types are recalculated in turn before interpreting the
+        ParameterizedExchange formulas into amounts.
+        """
+        self.param_values = self.replace_amounts(self.param_values, scenario_values)
+        global_project = self.recalculate_project_parameters()
+        all_db = {}
+        for p in DatabaseParameter.select(DatabaseParameter.database).distinct():
+            db = self.recalculate_database_parameters(p.database, global_project)
+            all_db[p.database] = {x: y for x, y in db.items()} if db else {}
+
+        complete_data = []
+        complete_indices = []
+
+        for p in ActivityParameter.select(ActivityParameter.group, ActivityParameter.database).distinct():
+            combination = {x: y for x, y in global_project.items()}
+            combination.update(all_db.get(p.database, {}))
+            act = self.recalculate_activity_parameters(p.group, combination)
+            combination.update(act)
+
+            # `data` contains the recalculated amounts for the exchanges.
+            ids, data = zip(*self.recalculate_exchanges(p.group, global_params=combination))
+            indices = []
+            for pk in ids:
+                exc = ExchangeDataset.get_by_id(pk)
+                input_key = (exc.input_database, exc.input_code)
+                output_key = (exc.output_database, exc.output_code)
+                if exc.input_database == bw.config.biosphere:
+                    indices.append((input_key, output_key))
+                else:
+                    indices.append((input_key, output_key, "technosphere"))
+            complete_data.extend(data)
+            complete_indices.extend(indices)
+
+        # After recalculating all the exchanges and adding all samples and indices
+        # to lists, format them according to presamples requirements:
+        # eg: samples as a column of floats and indices as a row of tuples.
+        samples = np.array(complete_data)
+        samples = samples.reshape(1, -1).T
+        indices = np.array(complete_indices)
+        return samples, indices
+
+    def presamples_from_scenarios(self, scenarios: Iterable[Tuple[str, Iterable]]) -> (str, str):
+        """ When given a iterable of multiple parameter scenarios, construct
+        a presamples package with all of the recalculated exchange amounts.
+        """
+        sample_data, indice_data = zip(*(self.recalculate_scenario(values) for _, values in scenarios))
+        samples = np.concatenate(sample_data, axis=1)
+        indices = next(iter(indice_data))
+
+        arrays = ps.split_inventory_presamples(samples, indices)
+        ps_id, ps_path = ps.create_presamples_package(matrix_data=arrays, seed="sequential")
+        return ps_id, ps_path
