@@ -262,8 +262,16 @@ class PresamplesTab(BaseRightTab):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.btn = QPushButton(qicons.load_db, "Get me that data")
-        self.testbtn = QPushButton(qicons.debug, "Testification")
+        self.load_btn = QPushButton(qicons.add, "Load data", self)
+        self.save_btn = QPushButton(
+            self.style().standardIcon(QStyle.SP_DialogSaveButton),
+            "Save data", self
+        )
+        self.refresh_btn = QPushButton(
+            self.style().standardIcon(QStyle.SP_BrowserReload),
+            "Reload data", self
+        )
+        self.presamples_btn = QPushButton(qicons.debug, "Presamples test", self)
         self.tbl = ScenarioTable(self)
         self.tbl.sync()
 
@@ -273,17 +281,22 @@ class PresamplesTab(BaseRightTab):
         self.explain_text = """Textificate"""
 
     def _connect_signals(self):
-        self.btn.clicked.connect(self.select_read_file)
-        self.testbtn.clicked.connect(self.testing)
+        self.load_btn.clicked.connect(self.select_read_file)
+        self.save_btn.clicked.connect(self.save_scenarios)
+        self.refresh_btn.clicked.connect(self.tbl.sync)
+        self.presamples_btn.clicked.connect(self.build_presamples_packages)
 
     def _construct_layout(self):
         layout = QVBoxLayout()
         row = QHBoxLayout()
-        row.addWidget(self.btn)
+        row.addWidget(self.load_btn)
+        row.addWidget(self.save_btn)
+        row.addWidget(self.refresh_btn)
         layout.addLayout(row)
         layout.addWidget(self.tbl)
         row = QHBoxLayout()
-        row.addWidget(self.testbtn)
+        row.addStretch(1)
+        row.addWidget(self.presamples_btn)
         layout.addLayout(row)
         layout.addStretch(1)
         self.setLayout(layout)
@@ -304,19 +317,9 @@ class PresamplesTab(BaseRightTab):
             print(self.tbl.dataframe)
             ps.save_scenarios_to_file(self.tbl.dataframe, filename)
 
-    def testing(self):
-        from bw2data.parameters import ProjectParameter, ActivityParameter
-        ppm = ps.PresamplesParameterManager()
-        d = ProjectParameter.select()
-        e = list(ppm.process_project_parameters(d))
-        print(e)
-        f = [1, 7, 4, 7, 3]
-        e = list(ppm.replace_amounts(e, f))
-        print(e)
-        ps.ppm.param_values = e
-        results = ppm.recalculate_project_parameters()
-        print(results)
-        for p in ActivityParameter.select():
-            print(f"name: {p.name}, group: {p.group}, amount: {p.amount}")
-            rec = ppm.recalculate_activity_parameters(p.group, results)
-            print(rec)
+    def build_presamples_packages(self):
+        ppm = ps.PresamplesParameterManager.construct()
+        d = ppm.presamples_from_scenarios(self.tbl.iterate_scenarios())
+        print(f"\noutput: {d}\n")
+
+
