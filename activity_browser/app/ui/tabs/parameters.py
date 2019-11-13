@@ -13,9 +13,10 @@ from ...settings import project_settings
 from ...signals import signals
 from ..icons import qicons
 from ..style import header, horizontal_line
-from ..tables import (ActivityParameterTable, DataBaseParameterTable,
-                      ExchangesTable, ProjectParameterTable,
-                      ScenarioTable)
+from ..tables import (
+    ActivityParameterTable, DataBaseParameterTable, ExchangesTable,
+    ProjectParameterTable, ScenarioTable
+)
 from .base import BaseRightTab
 
 
@@ -266,16 +267,16 @@ class PresamplesTab(BaseRightTab):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.load_btn = QPushButton(qicons.add, "Load data", self)
+        self.load_btn = QPushButton(qicons.add, "Load parameter scenarios", self)
         self.save_btn = QPushButton(
             self.style().standardIcon(QStyle.SP_DialogSaveButton),
-            "Save data", self
+            "Save parameter scenarios", self
         )
         self.refresh_btn = QPushButton(
             self.style().standardIcon(QStyle.SP_BrowserReload),
-            "Reload data", self
+            "Clear scenarios and restore defaults", self
         )
-        self.presamples_btn = QPushButton(qicons.debug, "Presamples test", self)
+        self.presamples_btn = QPushButton(qicons.debug, "Calculate and store as presamples", self)
         self.tbl = ScenarioTable(self)
         self.tbl.sync()
 
@@ -295,27 +296,26 @@ class PresamplesTab(BaseRightTab):
         row = QHBoxLayout()
         row.addWidget(self.load_btn)
         row.addWidget(self.save_btn)
+        row.addWidget(self.presamples_btn)
         row.addWidget(self.refresh_btn)
         layout.addLayout(row)
         layout.addWidget(self.tbl)
-        row = QHBoxLayout()
-        row.addStretch(1)
-        row.addWidget(self.presamples_btn)
-        layout.addLayout(row)
         layout.addStretch(1)
         self.setLayout(layout)
 
     def select_read_file(self):
-        path, _ = QFileDialog.getOpenFileName(
-            parent=self, caption="Select prepared scenario file")
+        path, _ = QFileDialog().getOpenFileName(
+            self, caption="Select prepared scenario file",
+            dir=project_settings.data_dir, filter=self.tbl.TSV_FILTER
+        )
         if path:
             df = load_scenarios_from_file(path)
             self.tbl.sync(df=df)
 
     def save_scenarios(self):
-        filename, _ = QFileDialog.getSaveFileName(
-            parent=self, caption="Save current scenarios to CSV",
-            dir=project_settings.data_dir, filter=self.tbl.CSV_FILTER
+        filename, _ = QFileDialog().getSaveFileName(
+            self, caption="Save current scenarios to TSV",
+            dir=project_settings.data_dir, filter=self.tbl.TSV_FILTER
         )
         if filename:
             save_scenarios_to_file(self.tbl.dataframe, filename)
