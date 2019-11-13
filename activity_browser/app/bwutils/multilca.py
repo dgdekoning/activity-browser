@@ -118,7 +118,7 @@ class MLCA(object):
         self.rev_method_index = {v: k for k, v in self.method_index.items()}
 
         # initial LCA and prepare method matrices
-        self.lca = bw.LCA(demand=self.func_units_dict, method=self.methods[0])
+        self.lca = self._construct_lca()
         self.lca.lci(factorize=True)
         self.method_matrices = []
         for method in self.methods:
@@ -148,6 +148,22 @@ class MLCA(object):
         self.process_contributions = np.zeros(
             (len(self.func_units), len(self.methods), self.lca.technosphere_matrix.shape[0]))
 
+        self._perform_calculations()
+
+        # TODO: get rid of the below
+        self.func_unit_translation_dict = {
+            str(bw.get_activity(list(func_unit.keys())[0])): func_unit for func_unit in self.func_units
+        }
+        self.func_key_dict = {m: i for i, m in enumerate(self.func_unit_translation_dict.keys())}
+        self.func_key_list = list(self.func_key_dict.keys())
+
+    def _construct_lca(self):
+        return bw.LCA(demand=self.func_units_dict, method=self.methods[0])
+
+    def _perform_calculations(self):
+        """ Isolates the code which performs calculations to allow subclasses
+        to either alter the code or redo calculations after matrix substitution.
+        """
         for row, func_unit in enumerate(self.func_units):
             # Do the LCA for the current functional unit
             self.lca.redo_lci(func_unit)
@@ -180,13 +196,6 @@ class MLCA(object):
                 self.elementary_flow_contributions[row, col] = np.array(
                     self.lca.characterized_inventory.sum(axis=1)).ravel()
                 self.process_contributions[row, col] = self.lca.characterized_inventory.sum(axis=0)
-
-        # TODO: get rid of the below
-        self.func_unit_translation_dict = {
-            str(bw.get_activity(list(func_unit.keys())[0])): func_unit for func_unit in self.func_units
-        }
-        self.func_key_dict = {m: i for i, m in enumerate(self.func_unit_translation_dict.keys())}
-        self.func_key_list = list(self.func_key_dict.keys())
 
     @property
     def func_units_dict(self):
