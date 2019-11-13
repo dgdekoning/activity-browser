@@ -99,7 +99,7 @@ class MLCA(object):
         If the given `cs_name` cannot be found in brightway calculation_setups
 
     """
-    def __init__(self, cs_name):
+    def __init__(self, cs_name: str):
         try:
             cs = bw.calculation_setups[cs_name]
         except KeyError:
@@ -198,7 +198,7 @@ class MLCA(object):
                 self.process_contributions[row, col] = self.lca.characterized_inventory.sum(axis=0)
 
     @property
-    def func_units_dict(self):
+    def func_units_dict(self) -> dict:
         """Return a dictionary of functional units (key, demand)."""
         return {key: 1 for func_unit in self.func_units for key in func_unit}
 
@@ -216,25 +216,18 @@ class MLCA(object):
         return databases
 
     @property
-    def lca_scores_normalized(self):
+    def lca_scores_normalized(self) -> np.ndarray:
         """Normalize LCA scores by impact assessment method.
         """
         return self.lca_scores / self.lca_scores.max(axis=0)
 
-    def get_all_metadata(self):
+    def get_all_metadata(self) -> None:
         """Populate AB_metadata with relevant database values.
 
         Set metadata in form of a Pandas DataFrame for biosphere and
         technosphere databases for tables and additional aggregation.
         """
         AB_metadata.add_metadata(self.all_databases)
-        # print('Making metadata DataFrame.')
-        # dfs = []
-        # for db in self.all_databases:
-        #     df_temp = pd.DataFrame(bw.Database(db))
-        #     df_temp.index = pd.MultiIndex.from_tuples(zip(df_temp['database'], df_temp['code']))
-        #     dfs.append(df_temp)
-        # self.df_meta = pd.concat(dfs, sort=False)
 
 
 class Contributions(object):
