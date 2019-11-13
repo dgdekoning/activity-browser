@@ -202,7 +202,7 @@ class PresamplesParameterManager(object):
         indices = np.array(complete_indices)
         return samples, indices
 
-    def presamples_from_scenarios(self, scenarios: Iterable[Tuple[str, Iterable]]) -> (str, str):
+    def presamples_from_scenarios(self, name: str, scenarios: Iterable[Tuple[str, Iterable]]) -> (str, str):
         """ When given a iterable of multiple parameter scenarios, construct
         a presamples package with all of the recalculated exchange amounts.
         """
@@ -211,8 +211,17 @@ class PresamplesParameterManager(object):
         indices = next(iter(indice_data))
 
         arrays = ps.split_inventory_presamples(samples, indices)
-        ps_id, ps_path = ps.create_presamples_package(matrix_data=arrays, seed="sequential")
+        ps_id, ps_path = ps.create_presamples_package(
+            matrix_data=arrays, name=name, seed="sequential"
+        )
         return ps_id, ps_path
+
+    @staticmethod
+    def store_presamples_as_resource(name: str, path: str) -> Optional[ps.PresampleResource]:
+        if not name or not path:
+            return
+        resource = ps.PresampleResource.create(name=name, path=path)
+        return resource
 
 
 def process_brightway_parameters() -> Iterable[tuple]:

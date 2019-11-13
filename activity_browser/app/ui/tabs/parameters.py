@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
 from PySide2.QtCore import Slot, QSize
-from PySide2.QtWidgets import (QCheckBox, QFileDialog, QHBoxLayout, QPushButton,
-                               QToolBar, QVBoxLayout, QTabWidget, QStyle)
+from PySide2.QtWidgets import (
+    QCheckBox, QFileDialog, QHBoxLayout, QInputDialog, QPushButton, QToolBar,
+    QStyle, QVBoxLayout, QTabWidget
+)
 
-from ...bwutils import presamples as ps
+from ...bwutils.presamples import (
+    PresamplesParameterManager, load_scenarios_from_file, save_scenarios_to_file
+)
 from ...settings import project_settings
 from ...signals import signals
 from ..icons import qicons
@@ -305,7 +309,7 @@ class PresamplesTab(BaseRightTab):
         path, _ = QFileDialog.getOpenFileName(
             parent=self, caption="Select prepared scenario file")
         if path:
-            df = ps.load_scenarios_from_file(path)
+            df = load_scenarios_from_file(path)
             self.tbl.sync(df=df)
 
     def save_scenarios(self):
@@ -314,12 +318,15 @@ class PresamplesTab(BaseRightTab):
             dir=project_settings.data_dir, filter=self.tbl.CSV_FILTER
         )
         if filename:
-            print(self.tbl.dataframe)
-            ps.save_scenarios_to_file(self.tbl.dataframe, filename)
+            save_scenarios_to_file(self.tbl.dataframe, filename)
 
     def build_presamples_packages(self):
-        ppm = ps.PresamplesParameterManager.construct()
-        d = ppm.presamples_from_scenarios(self.tbl.iterate_scenarios())
-        print(f"\noutput: {d}\n")
-
-
+        """ Calculate and store presamples arrays from parameter scenarios.
+        """
+        name, ok = QInputDialog().getText(
+            self, "Presamples name", "Unique name for presamples package:",
+        )
+        if ok and name:
+            ppm = PresamplesParameterManager.construct()
+            ps_id, path = ppm.presamples_from_scenarios(name, self.tbl.iterate_scenarios())
+            ppm.store_presamples_as_resource(name, path)
