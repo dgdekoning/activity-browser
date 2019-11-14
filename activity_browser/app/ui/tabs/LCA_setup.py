@@ -96,7 +96,6 @@ class LCASetupTab(QtWidgets.QWidget):
 
         calc_row = QtWidgets.QHBoxLayout()
         calc_row.addWidget(self.calculate_button)
-        # calc_row.addWidget(self.sankey_button)
         calc_row.addStretch(1)
 
         container = QtWidgets.QVBoxLayout()
@@ -116,7 +115,6 @@ class LCASetupTab(QtWidgets.QWidget):
     def connect_signals(self):
         # Signals
         self.calculate_button.clicked.connect(self.start_calculation)
-        # self.sankey_button.clicked.connect(self.open_sankey)
 
         self.new_cs_button.clicked.connect(signals.new_calculation_setup.emit)
         self.delete_cs_button.clicked.connect(
@@ -166,15 +164,3 @@ class LCASetupTab(QtWidgets.QWidget):
     def enable_calculations(self):
         valid_cs = all([self.activities_table.rowCount(), self.methods_table.rowCount()])
         self.calculate_button.setEnabled(valid_cs)
-        # self.sankey_button.setEnabled(valid_cs)
-
-    # def open_sankey(self):
-    #     if self.list_widget.currentText():
-    #         cs = self.list_widget.currentText()
-    #         if hasattr(self, 'sankey'):
-    #             self.window.stacked.removeWidget(self.sankey)
-    #             self.sankey.deleteLater()
-    #         self.sankey = SankeyWidget(self, cs=cs)
-    #         self.window.stacked.addWidget(self.sankey)
-    #         self.window.stacked.setCurrentWidget(self.sankey)
-    #         signals.update_windows.emit()
