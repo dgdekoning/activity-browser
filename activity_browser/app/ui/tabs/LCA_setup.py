@@ -2,15 +2,10 @@
 from PySide2 import QtWidgets
 from brightway2 import calculation_setups
 
-# from activity_browser.app.ui.web.sankey import SankeyWidget
+from ...signals import signals
 from ..icons import qicons
 from ..style import horizontal_line, header
-from ..tables import (
-    CSActivityTable,
-    CSList,
-    CSMethodsTable,
-)
-from ...signals import signals
+from ..tables import CSActivityTable, CSList, CSMethodsTable
 
 """
 Lifecycle of a calculation setup
@@ -78,13 +73,12 @@ The currently selected calculation setup is retrieved by getting the currently s
 
 
 class LCASetupTab(QtWidgets.QWidget):
-    def __init__(self, parent):
-        super(LCASetupTab, self).__init__(parent)
-        self.window = self.window()
+    def __init__(self, parent=None):
+        super().__init__(parent)
 
         self.activities_table = CSActivityTable(self)
         self.methods_table = CSMethodsTable(self)
-        self.list_widget = CSList()
+        self.list_widget = CSList(self)
 
         self.new_cs_button = QtWidgets.QPushButton(qicons.add, "New")
         self.rename_cs_button = QtWidgets.QPushButton(qicons.edit, "Rename")
@@ -138,7 +132,7 @@ class LCASetupTab(QtWidgets.QWidget):
         # Slots
         signals.set_default_calculation_setup.connect(self.set_default_calculation_setup)
         signals.project_selected.connect(self.set_default_calculation_setup)
-        signals.calculation_setup_selected.connect(self.show_details)
+        signals.calculation_setup_selected.connect(lambda: self.show_details())
         signals.calculation_setup_selected.connect(self.enable_calculations)
         signals.calculation_setup_changed.connect(self.enable_calculations)
 
@@ -155,27 +149,19 @@ class LCASetupTab(QtWidgets.QWidget):
 
     def set_default_calculation_setup(self):
         if not len(calculation_setups):
-            self.hide_details()
+            self.show_details(False)
             self.calculate_button.setEnabled(False)
-            # self.sankey_button.setEnabled(False)
         else:
             signals.calculation_setup_selected.emit(
                 sorted(calculation_setups)[0]
             )
 
-    def hide_details(self):
-        self.rename_cs_button.hide()
-        self.delete_cs_button.hide()
-        self.list_widget.hide()
-        self.activities_table.hide()
-        self.methods_table.hide()
-
-    def show_details(self):
-        self.rename_cs_button.show()
-        self.delete_cs_button.show()
-        self.list_widget.show()
-        self.activities_table.show()
-        self.methods_table.show()
+    def show_details(self, show: bool = True):
+        self.rename_cs_button.setVisible(show)
+        self.delete_cs_button.setVisible(show)
+        self.list_widget.setVisible(show)
+        self.activities_table.setVisible(show)
+        self.methods_table.setVisible(show)
 
     def enable_calculations(self):
         valid_cs = all([self.activities_table.rowCount(), self.methods_table.rowCount()])
