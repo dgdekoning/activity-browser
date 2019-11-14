@@ -74,9 +74,10 @@ def get_unit(method, relative):
 
 
 class LCAResultsSubTab(QTabWidget):
-    def __init__(self, parent, name):
-        super(LCAResultsSubTab, self).__init__(parent)
+    def __init__(self, name: str, ps_name: str = None, parent=None):
+        super().__init__(parent)
         self.cs_name = name
+        self.ps_name = ps_name
         self.method_dict = dict()
 
         self.setMovable(True)
