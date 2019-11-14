@@ -1,29 +1,25 @@
 # -*- coding: utf-8 -*-
-from PySide2.QtWidgets import (QWidget, QTabWidget, QVBoxLayout, QHBoxLayout,
-    QScrollArea, QRadioButton, QLabel, QCheckBox, QPushButton, QComboBox)
-from PySide2 import QtGui, QtWidgets, QtCore
+from typing import Optional
 
+from PySide2.QtWidgets import (
+    QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QRadioButton,
+    QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox
+)
+from PySide2 import QtGui, QtCore
 from stats_arrays.errors import InvalidParamsError
 
-from ..style import horizontal_line, vertical_line, header
-from ..tables import (
-    LCAResultsTable,
-    ContributionTable,
-    InventoryTable,
+from ...bwutils import (
+    Contributions, CSMonteCarloLCA, MLCA, PresamplesMLCA, commontasks as bc
 )
+from ...signals import signals
 from ..figures import (
-    LCAResultsPlot,
-    ContributionPlot,
-    CorrelationPlot,
-    LCAResultsBarChart,
-    MonteCarloPlot,
+    LCAResultsPlot, ContributionPlot, CorrelationPlot, LCAResultsBarChart,
+    MonteCarloPlot
 )
+from ..style import horizontal_line, vertical_line, header
+from ..tables import ContributionTable, InventoryTable, LCAResultsTable
 from ..widgets import CutoffMenu
 from ..web.graphnav import SankeyNavigatorWidget
-from ...signals import signals
-from ...bwutils.multilca import MLCA, Contributions
-from ...bwutils.montecarlo import CSMonteCarloLCA
-from ...bwutils import commontasks as bc
 
 
 # TODO: This module needs a revision
@@ -78,6 +74,8 @@ class LCAResultsSubTab(QTabWidget):
         super().__init__(parent)
         self.cs_name = name
         self.ps_name = ps_name
+        self.mlca: Optional[MLCA] = None
+        self.contributions: Optional[Contributions] = None
         self.method_dict = dict()
 
         self.setMovable(True)
@@ -95,7 +93,10 @@ class LCAResultsSubTab(QTabWidget):
 
     def do_calculations(self):
         """ Update the mlca calculation. """
-        self.mlca = MLCA(self.cs_name)
+        if self.ps_name is None:
+            self.mlca = MLCA(self.cs_name)
+        else:
+            self.mlca = PresamplesMLCA(self.cs_name, self.ps_name)
         self.contributions = Contributions(self.mlca)
         try:
             self.mc = CSMonteCarloLCA(self.cs_name)
@@ -941,7 +942,7 @@ class MonteCarloTab(NewAnalysisTab):
         # H-LAYOUT start simulation
         self.button_run = QPushButton('Run Simulation')
         self.label_runs = QLabel('Iterations:')
-        self.iterations = QtWidgets.QLineEdit('10')
+        self.iterations = QLineEdit('10')
         self.iterations.setFixedWidth(40)
         self.iterations.setValidator(QtGui.QIntValidator(1, 1000))
 
