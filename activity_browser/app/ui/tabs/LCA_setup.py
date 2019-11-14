@@ -84,7 +84,9 @@ class LCASetupTab(QtWidgets.QWidget):
         self.rename_cs_button = QtWidgets.QPushButton(qicons.edit, "Rename")
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
-        # self.sankey_button = QtWidgets.QPushButton('Sankey')
+        self.presamples_label = QtWidgets.QLabel("Use prepared scenario presamples:")
+        self.presamples_list = QtWidgets.QComboBox()
+        self.presamples_button = QtWidgets.QPushButton(qicons.calculate, "Calculate with presamples")
 
         name_row = QtWidgets.QHBoxLayout()
         name_row.addWidget(header('Calculation Setups:'))
@@ -96,6 +98,9 @@ class LCASetupTab(QtWidgets.QWidget):
 
         calc_row = QtWidgets.QHBoxLayout()
         calc_row.addWidget(self.calculate_button)
+        calc_row.addWidget(self.presamples_label)
+        calc_row.addWidget(self.presamples_list)
+        calc_row.addWidget(self.presamples_button)
         calc_row.addStretch(1)
 
         container = QtWidgets.QVBoxLayout()
@@ -115,6 +120,7 @@ class LCASetupTab(QtWidgets.QWidget):
     def connect_signals(self):
         # Signals
         self.calculate_button.clicked.connect(self.start_calculation)
+        self.presamples_button.clicked.connect(self.presamples_calculation)
 
         self.new_cs_button.clicked.connect(signals.new_calculation_setup.emit)
         self.delete_cs_button.clicked.connect(
@@ -144,6 +150,11 @@ class LCASetupTab(QtWidgets.QWidget):
 
     def start_calculation(self):
         signals.lca_calculation.emit(self.list_widget.name)
+
+    def presamples_calculation(self):
+        signals.lca_presamples_calculation.emit(
+            self.list_widget.name, self.presamples_list.currentText()
+        )
 
     def set_default_calculation_setup(self):
         if not len(calculation_setups):
