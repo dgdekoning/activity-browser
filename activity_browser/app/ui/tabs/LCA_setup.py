@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtWidgets
 from brightway2 import calculation_setups
+from presamples import PresampleResource
 
 from ...signals import signals
 from ..icons import qicons
@@ -135,7 +136,9 @@ class LCASetupTab(QtWidgets.QWidget):
 
         # Slots
         signals.set_default_calculation_setup.connect(self.set_default_calculation_setup)
+        signals.set_default_calculation_setup.connect(self.valid_presamples)
         signals.project_selected.connect(self.set_default_calculation_setup)
+        signals.project_selected.connect(self.valid_presamples)
         signals.calculation_setup_selected.connect(lambda: self.show_details())
         signals.calculation_setup_selected.connect(self.enable_calculations)
         signals.calculation_setup_changed.connect(self.enable_calculations)
@@ -164,6 +167,18 @@ class LCASetupTab(QtWidgets.QWidget):
             signals.calculation_setup_selected.emit(
                 sorted(calculation_setups)[0]
             )
+
+    def valid_presamples(self):
+        """ Determine if calculate with presamples is active.
+        """
+        valid = False
+        self.presamples_list.clear()
+        if self.calculate_button.isEnabled() and PresampleResource.select().exists():
+            valid = True
+            resources = [r.name for r in PresampleResource.select(PresampleResource.name)]
+            self.presamples_list.addItems(resources)
+        self.presamples_list.setEnabled(valid)
+        self.presamples_button.setEnabled(valid)
 
     def show_details(self, show: bool = True):
         self.rename_cs_button.setVisible(show)
