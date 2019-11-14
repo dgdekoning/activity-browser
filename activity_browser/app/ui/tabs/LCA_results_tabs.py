@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple
 from typing import Optional
 
 from PySide2.QtWidgets import (
@@ -69,6 +70,12 @@ def get_unit(method, relative):
     return unit
 
 
+# Special namedtuple for the LCAResults TabWidget.
+Tabs = namedtuple(
+    "tabs", ["inventory", "results", "ef", "process", "mc", "sankey"]
+)
+
+
 class LCAResultsSubTab(QTabWidget):
     def __init__(self, name: str, ps_name: str = None, parent=None):
         super().__init__(parent)
@@ -76,7 +83,10 @@ class LCAResultsSubTab(QTabWidget):
         self.ps_name = ps_name
         self.mlca: Optional[MLCA] = None
         self.contributions: Optional[Contributions] = None
+        self.mc: Optional[CSMonteCarloLCA] = None
         self.method_dict = dict()
+        self.single_func_unit = False
+        self.single_method = False
 
         self.setMovable(True)
         self.setVisible(False)
@@ -86,9 +96,24 @@ class LCAResultsSubTab(QTabWidget):
         # self.setTabPosition(1)  # South-facing Tabs
 
         self.do_calculations()
+        self.tabs = Tabs(
+            inventory=InventoryTab(self),
+            results=LCAResultsTab(self),
+            ef=ElementaryFlowContributionTab(self, relativity=True),
+            process=ProcessContributionsTab(self, relativity=True),
+            mc=None if self.mc is None else MonteCarloTab(self),
+            sankey=SankeyNavigatorWidget(self.cs_name, parent=self),
+        )
+        self.tab_names = Tabs(
+            inventory="Inventory",
+            results="LCA Results",
+            ef="EF Contributions",
+            process="Process Contributions",
+            mc="Monte Carlo",
+            sankey="Sankey",
+        )
         self.setup_tabs()
-
-        self.setCurrentWidget(self.LCA_results_tab)
+        self.setCurrentWidget(self.tabs.results)
         self.currentChanged.connect(self.generate_content_on_click)
 
     def do_calculations(self):
@@ -109,43 +134,31 @@ class LCAResultsSubTab(QTabWidget):
         # self.mct.initialize(self.cs_name)
 
         self.method_dict = bc.get_LCIA_method_name_dict(self.mlca.methods)
-
         self.single_func_unit = True if len(self.mlca.func_units) == 1 else False
         self.single_method = True if len(self.mlca.methods) == 1 else False
 
     def setup_tabs(self):
-        """ Update the calculation setup. """
-
+        """ Have all of the tabs pull in their required data.
+        """
         # the LCA results tabs (order matters)
-        self.inventory_tab = InventoryTab(self)
-        self.inventory_tab.update_table()
-
-        self.LCA_results_tab = LCAResultsTab(self)
-        self.LCA_results_tab.update_tab()
-        self.addTab(self.LCA_results_tab, "LCA Results")
-
-        self.EF_contribution_tab = ElementaryFlowContributionTab(self, relativity=True)
-        self.EF_contribution_tab.update_analysis_tab()
-
-        self.process_contributions_tab = ProcessContributionsTab(self, relativity=True)
-        self.process_contributions_tab.update_analysis_tab()
-
+        self.tabs.inventory.update_table()
+        self.tabs.results.update_tab()
+        self.tabs.ef.update_analysis_tab()
+        self.tabs.process.update_analysis_tab()
         if self.mc:
-            self.monte_carlo_tab = MonteCarloTab(self)
-            self.monte_carlo_tab.update_tab()
-
+            self.tabs.mc.update_tab()
         # self.correlations_tab = CorrelationsTab(self)
         # self.correlations_tab.update_analysis_tab()
-
-        self.sankey_tab = SankeyNavigatorWidget(self.cs_name, parent=self)
-        self.sankey_tab.update_calculation_setup(cs_name=self.cs_name)
-        self.addTab(self.sankey_tab, "Sankey")
+        self.tabs.sankey.update_calculation_setup(cs_name=self.cs_name)
+        for name, tab in zip(self.tab_names, self.tabs):
+            if tab is not None:
+                self.addTab(tab, name)
 
     def generate_content_on_click(self, index):
-        if index == self.indexOf(self.sankey_tab):
-            if not self.sankey_tab.has_sankey:
+        if index == self.indexOf(self.tabs.sankey):
+            if not self.tabs.sankey.has_sankey:
                 print('Generating Sankey Tab')
-                self.sankey_tab.new_sankey()
+                self.tabs.sankey.new_sankey()
 
 
 class AnalysisTab(QWidget):
@@ -553,9 +566,6 @@ class InventoryTab(NewAnalysisTab):
         self.layout.addWidget(self.table)
 
         self.add_export()
-
-        self.parent.addTab(self, 'Inventory')
-
         self.connect_signals()
 
     def connect_signals(self):
@@ -817,8 +827,6 @@ class ElementaryFlowContributionTab(ContributionTab):
 
         self.contribution_type = 'EF'
         self.contribution_fn = 'EF contributions'
-        self.parent.addTab(self, 'EF Contributions')
-
         self.connect_signals()
 
     def update_dataframe(self):
@@ -844,8 +852,6 @@ class ProcessContributionsTab(ContributionTab):
 
         self.contribution_type = 'PC'
         self.contribution_fn = 'Process contributions'
-        self.parent.addTab(self, 'Process Contributions')
-
         self.connect_signals()
 
     def update_dataframe(self):
@@ -908,9 +914,6 @@ class MonteCarloTab(NewAnalysisTab):
         self.layout.addWidget(self.plot)
         self.add_export()
         self.layout.setAlignment(QtCore.Qt.AlignTop)
-
-        self.parent.addTab(self, "Monte Carlo")
-
         self.connect_signals()
 
     def connect_signals(self):
