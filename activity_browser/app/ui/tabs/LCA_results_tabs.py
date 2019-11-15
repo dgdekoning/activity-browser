@@ -35,21 +35,19 @@ def get_header_layout(header_text="A new Widget"):
     return vlayout
 
 
-def get_unit(method, relative):
-    """Determine the unit based on whether a plot is shown:
+def get_unit(method: tuple, relative: bool = False) -> str:
+    """ Determine the unit based on whether a plot is shown:
     - for a number of functional units
     - for a number of impact categories
     and whether the axis are related to:
     - relative or
-    - absolute numbers."""
+    - absolute numbers.
+    """
     if relative:
-        unit = 'relative share'
-    else:
-        if method:  # for all functional units
-            unit = bc.unit_of_method(method)
-        else:
-            unit = 'units of each LCIA method'
-    return unit
+        return "relative share"
+    if method:  # for all functional units
+        return bc.unit_of_method(method)
+    return "units of each LCIA method"
 
 
 # Special namedtuple for the LCAResults TabWidget.
