@@ -427,20 +427,17 @@ class AnalysisTab(QWidget):
 
     def update_combobox(self):
         """ Update the combobox menu. """
+        self.combobox_menu_combobox.blockSignals(True)
         self.combobox_menu_combobox.clear()
         visibility = True
-        self.combobox_menu_combobox.blockSignals(True)
-
         if self.combobox_menu_label.text() == self.combobox_menu_method_label: # if is assessment methods
             self.combobox_list = list(self.parent.method_dict.keys())
             # if self.parent.single_method:
             #     visibility = False
-
         else:
             self.combobox_list = list(self.parent.mlca.func_unit_translation_dict.keys())
             # if self.parent.single_func_unit:
             #     visibility = False
-
         self.combobox_menu_combobox.insertItems(0, self.combobox_list)
         self.combobox_menu_combobox.blockSignals(False)
 
@@ -517,8 +514,8 @@ class NewAnalysisTab(QWidget):
 
     def update_combobox(self, labels):
         """ Update the combobox menu. """
-        self.combobox.clear()
         self.combobox.blockSignals(True)
+        self.combobox.clear()
         self.combobox.insertItems(0, labels)
         self.combobox.blockSignals(False)
 
@@ -614,7 +611,6 @@ class InventoryTab(NewAnalysisTab):
             if self.df_biosphere is None:
                 self.df_biosphere = self.parent.contributions.inventory_df(inventory_type='biosphere')
             self.table.sync(self.df_biosphere)
-
         else:
             if self.df_technosphere is None:
                 self.df_technosphere = self.parent.contributions.inventory_df(inventory_type='technosphere')
@@ -751,8 +747,8 @@ class ContributionTab(AnalysisTab):
     def update_aggregation_combobox(self):
         """Contribution-specific aggregation combobox
         """
-        self.aggregator_combobox.clear()
         self.aggregator_combobox.blockSignals(True)
+        self.aggregator_combobox.clear()
         if self.contribution_type == 'EF':
             self.aggregator_list = self.parent.contributions.DEFAULT_EF_AGGREGATES
         elif self.contribution_type == 'PC':
@@ -1078,8 +1074,8 @@ class MonteCarloTab(NewAnalysisTab):
 
     def update_combobox(self, combobox, labels):
         """ Update the combobox menu. """
-        combobox.clear()
         combobox.blockSignals(True)
+        combobox.clear()
         combobox.insertItems(0, labels)
         combobox.blockSignals(False)
 
