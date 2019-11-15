@@ -40,8 +40,7 @@ class LCAResultsTab(ABTab):
     @Slot(str, str, name="generatePresamplesLCA")
     def generate_setup(self, name: str, presamples: str = None):
         """ Check if the calculation setup exists, if it does, remove it, then create a new one. """
-        if name in self.tabs:
-            self.remove_setup(name)
+        self.remove_setup(name)
 
         new_tab = LCAResultsSubTab(name, presamples, self)
         self.tabs[name] = new_tab
