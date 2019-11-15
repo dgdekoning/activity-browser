@@ -166,30 +166,24 @@ class LCAResultsSubTab(QTabWidget):
 
 
 class AnalysisTab(QWidget):
-    def __init__(self, parent, combobox=None, table=None,
-                 plot=None, export=None, relativity=None, custom=False, *args, **kwargs):
+    def __init__(self, parent = None):
         super().__init__(parent)
         self.parent = parent
-        self.first_time_calculated = False
-
-        self.custom = custom
-
-        self.combobox_menu_combobox = combobox
-        self.table = table
-        self.plot = plot
-        self.export_menu = export
-        self.relativity = relativity
-        self.relative = True
+        self.combobox_menu_combobox = None
+        self.table = None
+        self.plot = None
+        self.relativity = False
+        self.relative = False
         self.scenario_box = QComboBox()
+        self.combobox_menu_method_bool = True
+        self.combobox_menu_func_bool = False
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
-        # self.connect_signals()  # called by the sub-classes
-
     def connect_signals(self):
         # Combo box signal
-        if self.combobox_menu_combobox != None:
+        if self.combobox_menu_combobox:
             if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
                 self.combobox_menu_switch_met.clicked.connect(self.combo_switch_check)
                 self.combobox_menu_switch_fun.clicked.connect(self.combo_switch_check)
@@ -218,10 +212,6 @@ class AnalysisTab(QWidget):
         if self.plot and self.export_menu:
             self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
             self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
-
-    def add_header(self, header_text):
-        if isinstance(header_text, str):
-            self.header.setText(header_text)
 
     def combo_switch_check(self):
         """ Show either the functional units or methods combo-box, dependent on button state. """
@@ -300,20 +290,18 @@ class AnalysisTab(QWidget):
             self.main_space_widget_layout.addWidget(self.main_space_table)
         self.main_space_widget_layout.addStretch()
 
-        if not self.custom:
-            pass
-            # self.main_space_widget_layout.addStretch()
-
         self.layout.addWidget(self.main_space)
 
     def update_analysis_tab(self):
-        if self.combobox_menu_combobox != None:
+        if self.combobox_menu_combobox:
             self.update_combobox()
+        self.update_plot_table()
+
+    def update_plot_table(self):
         if self.plot:
             self.update_plot()
         if self.table:
             self.update_table()
-            self.first_time_calculated = True
 
     def update_table(self, method=None, *args, **kwargs):
         """ Update the table. """
@@ -336,7 +324,7 @@ class AnalysisTab(QWidget):
             self.button2.clicked.connect(self.relativity_check)
 
     def relativity_check(self):
-        if self.relative == False:
+        if not self.relative:
             self.button1.setChecked(True)
             self.button2.setChecked(False)
             self.relative = True
@@ -344,18 +332,13 @@ class AnalysisTab(QWidget):
             self.button1.setChecked(False)
             self.button2.setChecked(True)
             self.relative = False
-        if self.plot:
-            self.update_plot()
-        if self.table:
-            self.update_table()
+        self.update_plot_table()
 
-    def add_combobox(self, method=True, func=False):
+    def build_combobox(self, method=True, func=False):
         """ Add the combobox menu to the tab. """
         self.combobox_menu = QHBoxLayout()
-
         self.combobox_menu_label = QLabel()
 
-        self.combobox_menu_combobox = None
         self.combobox_menu_switch_met = None
         self.combobox_menu_method_label = None
         self.combobox_menu_method_bool = method
@@ -490,19 +473,6 @@ class NewAnalysisTab(QWidget):
         self.scenario_box = QComboBox()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
-
-    def add_combobox(self, label='Choose LCIA method:'):
-        """ Add the combobox menu to the tab. """
-        self.combobox_label = QLabel(label)
-        self.combobox = QComboBox()
-        self.combobox.scroll = False
-
-        self.combobox_menu = QHBoxLayout()
-        self.combobox_menu.addWidget(self.combobox_label)
-        self.combobox_menu.addWidget(self.combobox, 1)
-        self.combobox_menu.addStretch(1)
-
-        self.layout.addLayout(self.combobox_menu)
 
     @staticmethod
     @QtCore.Slot(int)
@@ -692,13 +662,17 @@ class LCAResultsTab(QWidget):
 
 class LCAScoresTab(NewAnalysisTab):
     def __init__(self, parent=None):
-        super(LCAScoresTab, self).__init__(parent)
+        super().__init__(parent)
         self.parent = parent
 
-        # self.header_text = "LCA scores comparison"
-        # self.add_header(self.header_text)
-
-        self.add_combobox(label='Choose LCIA method')
+        self.combobox_menu = QHBoxLayout()
+        self.combobox_label = QLabel("Choose LCIA method:")
+        self.combobox = QComboBox()
+        self.combobox.scroll = False
+        self.combobox_menu.addWidget(self.combobox_label)
+        self.combobox_menu.addWidget(self.combobox, 1)
+        self.combobox_menu.addStretch(1)
+        self.layout.addLayout(self.combobox_menu)
 
         self.plot = LCAResultsBarChart(self.parent)
         self.plot.plot_name = 'LCA scores_' + self.parent.cs_name
@@ -758,8 +732,11 @@ class LCIAResultsTab(AnalysisTab):
 
 class ContributionTab(AnalysisTab):
     def __init__(self, parent, **kwargs):
-        super(ContributionTab, self).__init__(parent, **kwargs)
+        super().__init__(parent)
         self.cutoff_menu = CutoffMenu(self, cutoff_value=0.05)
+
+        self.relativity = kwargs.get("relative", False)
+        self.relative = True
 
         self.df = None
         self.plot = ContributionPlot()
@@ -786,18 +763,18 @@ class ContributionTab(AnalysisTab):
         """Show either the functional units or methods combo-box, dependent on button state.
         """
         self.update_aggregation_combobox()
-        super(ContributionTab, self).combo_switch_check()
+        super().combo_switch_check()
 
     def update_analysis_tab(self):
         """Override and include call to update aggregation combobox"""
-        if self.aggregator_combobox != None:
+        if self.aggregator_combobox:
             self.update_aggregation_combobox()
-        super(ContributionTab, self).update_analysis_tab()
+        super().update_analysis_tab()
 
     def connect_signals(self):
         """Override the inherited method to perform the same thing plus aggregation
         """
-        if self.combobox_menu_combobox != None:
+        if self.combobox_menu_combobox:
             if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
                 self.combobox_menu_switch_met.clicked.connect(self.combo_switch_check)
                 self.combobox_menu_switch_fun.clicked.connect(self.combo_switch_check)
@@ -882,7 +859,7 @@ class ElementaryFlowContributionTab(ContributionTab):
         self.layout.addWidget(self.cutoff_menu)
         self.layout.addWidget(horizontal_line())
 
-        self.add_combobox(method=True, func=True)
+        self.build_combobox(method=True, func=True)
         self.add_main_space()
         self.add_export()
 
@@ -907,7 +884,7 @@ class ProcessContributionsTab(ContributionTab):
         self.layout.addWidget(self.cutoff_menu)
         self.layout.addWidget(horizontal_line())
 
-        self.add_combobox(method=True, func=True)
+        self.build_combobox(method=True, func=True)
         self.add_main_space()
         self.add_export()
 
@@ -926,7 +903,7 @@ class ProcessContributionsTab(ContributionTab):
 
 class CorrelationsTab(AnalysisTab):
     def __init__(self, parent, **kwargs):
-        super(CorrelationsTab, self).__init__(parent, **kwargs)
+        super().__init__(parent, **kwargs)
         self.parent = parent
 
         self.tab_text = "Correlations"
