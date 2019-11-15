@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import namedtuple
-from typing import Optional
+from typing import List, Optional, Union
 
 from PySide2.QtWidgets import (
     QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QRadioButton,
@@ -77,11 +77,13 @@ Tabs = namedtuple(
 
 
 class LCAResultsSubTab(QTabWidget):
+    update_scenario_box_index = QtCore.Signal(int)
+
     def __init__(self, name: str, ps_name: str = None, parent=None):
         super().__init__(parent)
         self.cs_name = name
         self.ps_name = ps_name
-        self.mlca: Optional[MLCA] = None
+        self.mlca: Optional[Union[MLCA, PresamplesMLCA]] = None
         self.contributions: Optional[Contributions] = None
         self.mc: Optional[CSMonteCarloLCA] = None
         self.method_dict = dict()
@@ -138,9 +140,21 @@ class LCAResultsSubTab(QTabWidget):
         self.single_method = True if len(self.mlca.methods) == 1 else False
 
     def setup_tabs(self):
-        """ Have all of the tabs pull in their required data.
+        """ Have all of the tabs pull in their required data and add them.
         """
-        # the LCA results tabs (order matters)
+        self._update_tabs()
+        visible = self.ps_name and isinstance(self.mlca, PresamplesMLCA)
+        for name, tab in zip(self.tab_names, self.tabs):
+            if tab is not None:
+                self.addTab(tab, name)
+                combobox = getattr(tab, "scenario_box", None)
+                if combobox and not visible:
+                    combobox.setVisible(False)
+                elif combobox and visible:
+                    combobox.addItems(self.get_scenarios())
+
+    def _update_tabs(self):
+        self.tabs.inventory.clear_tables()
         self.tabs.inventory.update_table()
         self.tabs.results.update_tab()
         self.tabs.ef.update_analysis_tab()
@@ -150,9 +164,22 @@ class LCAResultsSubTab(QTabWidget):
         # self.correlations_tab = CorrelationsTab(self)
         # self.correlations_tab.update_analysis_tab()
         self.tabs.sankey.update_calculation_setup(cs_name=self.cs_name)
-        for name, tab in zip(self.tab_names, self.tabs):
-            if tab is not None:
-                self.addTab(tab, name)
+
+    def get_scenarios(self) -> List[str]:
+        if self.ps_name is None or not isinstance(self.mlca, PresamplesMLCA):
+            raise TypeError("Using the wrong MLCA class to select scenarios")
+        return ["Scenario{}".format(i + 1) for i in range(self.mlca.total)]
+
+    @QtCore.Slot(int)
+    def update_scenario_data(self, index: int) -> None:
+        """ Will calculate which presamples array to use and update all child tabs.
+        """
+        if index == self.mlca.current:
+            return
+        steps = self.mlca.get_steps_to_index(index)
+        self.mlca.calculate_scenario(steps)
+        self._update_tabs()
+        self.update_scenario_box_index.emit(index)
 
     def generate_content_on_click(self, index):
         if index == self.indexOf(self.tabs.sankey):
@@ -592,6 +619,11 @@ class InventoryTab(NewAnalysisTab):
             if self.df_technosphere is None:
                 self.df_technosphere = self.parent.contributions.inventory_df(inventory_type='technosphere')
             self.table.sync(self.df_technosphere)
+
+    def clear_tables(self) -> None:
+        """ Set the biosphere and technosphere to None.
+        """
+        self.df_biosphere, self.df_technosphere = None, None
 
 
 class LCAResultsTab(QWidget):
