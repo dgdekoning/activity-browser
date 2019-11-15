@@ -35,24 +35,6 @@ def get_header_layout(header_text="A new Widget"):
     return vlayout
 
 
-def get_radio_buttons(names=['first', 'second'], states=[True, False]):
-    """ Add the radio buttons."""
-    # buttons
-    buttons = []
-    for name in names:
-        buttons.append(QRadioButton(name))
-
-    for i, state in enumerate(states):
-        buttons[i].setChecked(state)
-
-    # layout
-    combobox_menu = QHBoxLayout()
-    for button in buttons:
-        combobox_menu.addWidget(button)
-    combobox_menu.addStretch(1)
-    return buttons, combobox_menu
-
-
 def get_unit(method, relative):
     """Determine the unit based on whether a plot is shown:
     - for a number of functional units
