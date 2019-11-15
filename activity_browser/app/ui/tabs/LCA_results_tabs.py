@@ -189,9 +189,9 @@ class LCAResultsSubTab(QTabWidget):
 
 
 class AnalysisTab(QWidget):
-    def __init__(self, parent, combobox=None, table=None,\
+    def __init__(self, parent, combobox=None, table=None,
                  plot=None, export=None, relativity=None, custom=False, *args, **kwargs):
-        super(AnalysisTab, self).__init__(parent)
+        super().__init__(parent)
         self.parent = parent
         self.first_time_calculated = False
 
@@ -203,6 +203,7 @@ class AnalysisTab(QWidget):
         self.export_menu = export
         self.relativity = relativity
         self.relative = True
+        self.scenario_box = QComboBox()
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -425,6 +426,15 @@ class AnalysisTab(QWidget):
         self.layout.addLayout(self.combobox_menu)
         self.layout.addWidget(self.combobox_menu_horizontal)
 
+    @staticmethod
+    @QtCore.Slot(int)
+    def set_combobox_index(box: QComboBox, index: int) -> None:
+        """ Update the index on the given QComboBox without sending a signal.
+        """
+        box.blockSignals(True)
+        box.setCurrentIndex(index)
+        box.blockSignals(False)
+
     def update_combobox(self):
         """ Update the combobox menu. """
         self.combobox_menu_combobox.blockSignals(True)
@@ -494,8 +504,10 @@ class AnalysisTab(QWidget):
 
 
 class NewAnalysisTab(QWidget):
-    def __init__(self, parent):
-        super(NewAnalysisTab, self).__init__(parent)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.scenario_box = QComboBox()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
@@ -511,6 +523,15 @@ class NewAnalysisTab(QWidget):
         self.combobox_menu.addStretch(1)
 
         self.layout.addLayout(self.combobox_menu)
+
+    @staticmethod
+    @QtCore.Slot(int)
+    def set_combobox_index(box: QComboBox, index: int) -> None:
+        """ Update the index on the given QComboBox without sending a signal.
+        """
+        box.blockSignals(True)
+        box.setCurrentIndex(index)
+        box.blockSignals(False)
 
     def update_combobox(self, labels):
         """ Update the combobox menu. """
