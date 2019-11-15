@@ -19,7 +19,8 @@ class PresamplesMLCA(MLCA):
             raise ValueError("Presamples resource with name '{}' not found.".format(ps_name))
         super().__init__(cs_name)
         idx = next(iter(self.lca.presamples.matrix_indexer))
-        self.scenario_count = idx.ncols
+        self.total = idx.ncols
+        self.current = 0
 
     def _construct_lca(self) -> bw.LCA:
         return bw.LCA(
@@ -27,17 +28,36 @@ class PresamplesMLCA(MLCA):
             presamples=[self.resource.path]
         )
 
-    def calculate_scenario(self, skip: int = None) -> None:
+    def get_steps_to_index(self, index: int) -> int:
+        """ Determine how many steps to take when given the index we want
+         to land on.
+
+        We can only iterate through the presample arrays in one direction, so
+         if we go from 2 to 1 we need to calculate the amount of steps to loop
+         around to 1.
+        """
+        if index < 0:
+            raise ValueError("Negative indexes are not allowed")
+        elif index >= self.total:
+            raise ValueError("Given index is not possible for current presamples dataset")
+        if index < self.current:
+            return len(range(index)) + len(range(self.current, self.total))
+        else:
+            return len(range(self.current, index))
+
+    def calculate_scenario(self, steps: int = 1) -> None:
         """ Update the LCA matrices with the presamples arrays and redo
          the calculations.
 
-        Setting a `skip` value allows us to avoid running all the calculations
+        Setting a `steps` value allows us to avoid running all the calculations
          if we only want to look at (for example) the 1st and 5th scenarios.
         """
-        steps = range(skip + 1) if skip else range(1)
         # Iterate through the alternate matrices until the correct
         # one is reached
-        for _ in steps:
+        for _ in range(steps):
             self.lca.presamples.update_matrices(self.lca)
+            self.current += 1
+            if self.current == self.total:
+                self.current = 0
         # Recalculate everything, replacing all of the LCA data
         self._perform_calculations()
