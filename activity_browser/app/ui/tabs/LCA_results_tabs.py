@@ -518,12 +518,13 @@ class NewAnalysisTab(QWidget):
         box.setCurrentIndex(index)
         box.blockSignals(False)
 
-    def update_combobox(self, labels):
+    @staticmethod
+    def update_combobox(box: QComboBox, labels: List[str]) -> None:
         """ Update the combobox menu. """
-        self.combobox.blockSignals(True)
-        self.combobox.clear()
-        self.combobox.insertItems(0, labels)
-        self.combobox.blockSignals(False)
+        box.blockSignals(True)
+        box.clear()
+        box.insertItems(0, labels)
+        box.blockSignals(False)
 
     def add_export(self):
         """ Add the export menu to the tab. """
@@ -717,7 +718,7 @@ class LCAScoresTab(NewAnalysisTab):
         self.combobox.currentIndexChanged.connect(self.update_plot)
 
     def update_tab(self):
-        self.update_combobox([str(m) for m in self.parent.mlca.methods])
+        self.update_combobox(self.combobox, [str(m) for m in self.parent.mlca.methods])
         self.update_plot(method_index=0)
 
     def update_plot(self, method_index=None):
@@ -1115,13 +1116,6 @@ class MonteCarloTab(NewAnalysisTab):
         # add widget, but hide until MC is calculated
         self.layout.addWidget(self.export_widget)
         self.export_widget.hide()
-
-    def update_combobox(self, combobox, labels):
-        """ Update the combobox menu. """
-        combobox.blockSignals(True)
-        combobox.clear()
-        combobox.insertItems(0, labels)
-        combobox.blockSignals(False)
 
     def calculate_MC_LCA(self):
         iterations = int(self.iterations.text())
