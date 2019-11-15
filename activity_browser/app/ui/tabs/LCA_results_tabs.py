@@ -409,6 +409,9 @@ class AnalysisTab(QWidget):
 
             self.combobox_menu.addWidget(self.combobox_menu_switch_fun)
 
+        # Add scenario dropdown menu here
+        self.combobox_menu.addWidget(self.scenario_box)
+
         # Aggregator combobox goes here
         self.aggregator_label = QLabel("Aggregate by: ")
         self.aggregator_combobox = QComboBox()
@@ -592,17 +595,21 @@ class NewAnalysisTab(QWidget):
 
 class InventoryTab(NewAnalysisTab):
     def __init__(self, parent=None):
-        super(InventoryTab, self).__init__(parent)
-        self.parent = parent
+        super().__init__(parent)
         self.df_biosphere = None
         self.df_technosphere = None
 
         self.layout.addLayout(get_header_layout('Inventory'))
 
         # buttons
-        button, button_layout = get_radio_buttons(names=['Biosphere flows', 'Technosphere flows'], states=[True, False])
-        self.radio_button_biosphere = button[0]
-        self.radio_button_technosphere = button[1]
+        button_layout = QHBoxLayout()
+        self.radio_button_biosphere = QRadioButton("Biosphere flows")
+        self.radio_button_biosphere.setChecked(True)
+        button_layout.addWidget(self.radio_button_biosphere)
+        self.radio_button_technosphere = QRadioButton("Technosphere flows")
+        button_layout.addWidget(self.radio_button_technosphere)
+        button_layout.addWidget(self.scenario_box)
+        button_layout.addStretch(1)
         self.layout.addLayout(button_layout)
 
         # table
@@ -616,6 +623,11 @@ class InventoryTab(NewAnalysisTab):
     def connect_signals(self):
         self.radio_button_biosphere.clicked.connect(self.button_clicked)
         self.radio_button_technosphere.clicked.connect(self.button_clicked)
+        if self.parent:
+            self.scenario_box.currentIndexChanged.connect(self.parent.update_scenario_data)
+            self.parent.update_scenario_box_index.connect(
+                lambda index: self.set_combobox_index(self.scenario_box, index)
+            )
 
     def button_clicked(self):
         """Update table according to radiobutton selected."""
@@ -645,8 +657,8 @@ class InventoryTab(NewAnalysisTab):
 
 class LCAResultsTab(QWidget):
     def __init__(self, parent=None):
-        super(LCAResultsTab, self).__init__(parent)
-
+        super().__init__(parent)
+        self.parent = parent
         self.lca_scores_widget = LCAScoresTab(parent)
         self.lca_overview_widget = LCIAResultsTab(parent)
 
@@ -655,9 +667,15 @@ class LCAResultsTab(QWidget):
         self.layout.addLayout(get_header_layout('LCA Results'))
 
         # buttons
-        button, button_layout = get_radio_buttons(names=['Overview', 'by LCIA method'], states=[False, True])
-        self.button_overview = button[0]
-        self.button_by_method = button[1]
+        button_layout = QHBoxLayout()
+        self.button_overview = QRadioButton("Overview")
+        button_layout.addWidget(self.button_overview)
+        self.button_by_method = QRadioButton("by LCIA method")
+        self.button_by_method.setChecked(True)
+        button_layout.addWidget(self.button_by_method)
+        self.scenario_box = QComboBox()
+        button_layout.addWidget(self.scenario_box)
+        button_layout.addStretch(1)
         self.layout.addLayout(button_layout)
 
         self.layout.addWidget(self.lca_scores_widget)
@@ -670,6 +688,9 @@ class LCAResultsTab(QWidget):
     def connect_signals(self):
         self.button_overview.clicked.connect(self.button_clicked)
         self.button_by_method.clicked.connect(self.button_clicked)
+        if self.parent:
+            self.scenario_box.currentIndexChanged.connect(self.parent.update_scenario_data)
+            self.parent.update_scenario_box_index.connect(self.update_scenario_box)
 
     def button_clicked(self):
         if self.button_overview.isChecked():
@@ -683,6 +704,12 @@ class LCAResultsTab(QWidget):
         self.lca_scores_widget.update_tab()
         self.lca_overview_widget.update_plot()
         self.lca_overview_widget.update_table()
+
+    @QtCore.Slot(int)
+    def update_scenario_box(self, index: int) -> None:
+        self.scenario_box.blockSignals(True)
+        self.scenario_box.setCurrentIndex(index)
+        self.scenario_box.blockSignals(False)
 
 
 class LCAScoresTab(NewAnalysisTab):
@@ -807,6 +834,13 @@ class ContributionTab(AnalysisTab):
                     lambda name: self.update_table(method=name))
                 self.aggregator_combobox.currentTextChanged.connect(
                     lambda a: self.update_table())
+
+        # Add wiring for presamples scenarios
+        if self.parent:
+            self.scenario_box.currentIndexChanged.connect(self.parent.update_scenario_data)
+            self.parent.update_scenario_box_index.connect(
+                lambda index: self.set_combobox_index(self.scenario_box, index)
+            )
 
         # Mainspace Checkboxes
         self.main_space_tb_grph_table.stateChanged.connect(
@@ -977,6 +1011,12 @@ class MonteCarloTab(NewAnalysisTab):
         # self.radio_button_biosphere.clicked.connect(self.button_clicked)
         # self.radio_button_technosphere.clicked.connect(self.button_clicked)
 
+        if self.parent:
+            self.scenario_box.currentIndexChanged.connect(self.parent.update_scenario_data)
+            self.parent.update_scenario_box_index.connect(
+                lambda index: self.set_combobox_index(self.scenario_box, index)
+            )
+
         # Export Plot
         if self.plot and self.export_menu:
             self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
@@ -999,6 +1039,7 @@ class MonteCarloTab(NewAnalysisTab):
         self.iterations.setValidator(QtGui.QIntValidator(1, 1000))
 
         self.hlayout_run = QHBoxLayout()
+        self.hlayout_run.addWidget(self.scenario_box)
         self.hlayout_run.addWidget(self.button_run)
         self.hlayout_run.addWidget(self.label_runs)
         self.hlayout_run.addWidget(self.iterations)
