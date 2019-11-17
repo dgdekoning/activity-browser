@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 
 from PySide2.QtWidgets import (
     QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QRadioButton,
-    QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox
+    QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QTableView
 )
 from PySide2 import QtGui, QtCore
 from stats_arrays.errors import InvalidParamsError
@@ -470,6 +470,16 @@ class NewAnalysisTab(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent = parent
+
+        # Important variables optionally used in subclasses
+        self.table: Optional[QTableView] = None
+        self.plot: Optional[QWidget] = None
+        self.export_plot_buttons_png: Optional[QPushButton] = None
+        self.export_plot_buttons_svg: Optional[QPushButton] = None
+        self.export_table_buttons_copy: Optional[QPushButton] = None
+        self.export_table_buttons_csv: Optional[QPushButton] = None
+        self.export_table_buttons_excel: Optional[QPushButton] = None
+
         self.scenario_box = QComboBox()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -491,54 +501,45 @@ class NewAnalysisTab(QWidget):
         box.insertItems(0, labels)
         box.blockSignals(False)
 
-    def add_export(self):
-        """ Add the export menu to the tab. """
-        self.export_menu = QHBoxLayout()
+    def build_export(self, has_table: bool = True, has_plot: bool = True) -> QHBoxLayout:
+        """ Construct a custom export button layout. """
+        export_menu = QHBoxLayout()
 
         # Export Plot
-        self.export_plot = QHBoxLayout()
-        self.export_plot_label = QLabel("Export plot:")
-        self.export_plot_buttons_png = QPushButton(".png")
-        self.export_plot_buttons_svg = QPushButton(".svg")
-        # Export Table
-        self.export_table = QHBoxLayout()
-        self.export_table_label = QLabel("Export table:")
-        self.export_table_buttons_copy = QPushButton("Copy")
-        self.export_table_buttons_csv = QPushButton(".csv")
-        self.export_table_buttons_excel = QPushButton("Excel")
-        # Assemble export plot
-        self.export_plot.addWidget(self.export_plot_label)
-        self.export_plot.addWidget(self.export_plot_buttons_png)
-        self.export_plot.addWidget(self.export_plot_buttons_svg)
-        # Assemble export table
-        self.export_table.addWidget(self.export_table_label)
-        self.export_table.addWidget(self.export_table_buttons_copy)
-        self.export_table.addWidget(self.export_table_buttons_csv)
-        self.export_table.addWidget(self.export_table_buttons_excel)
+        if has_plot:
+            export_plot = QHBoxLayout()
+            export_plot_label = QLabel("Export plot:")
+            self.export_plot_buttons_png = QPushButton(".png")
+            self.export_plot_buttons_svg = QPushButton(".svg")
+            self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
+            self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
+            export_plot.addWidget(export_plot_label)
+            export_plot.addWidget(self.export_plot_buttons_png)
+            export_plot.addWidget(self.export_plot_buttons_svg)
+            export_menu.addLayout(export_plot)
 
-        # Assemble export menu
-        if hasattr(self, 'plot'):
-            self.export_menu.addLayout(self.export_plot)
-        if hasattr(self, 'table') and hasattr(self, 'plot'):
-            self.export_menu_vert_line = vertical_line()
-            self.export_menu.addWidget(self.export_menu_vert_line)
-        if hasattr(self, 'table'):
-            self.export_menu.addLayout(self.export_table)
-        self.export_menu.addStretch()
-
-        # self.layout.addWidget(horizontal_line())
-        self.layout.addLayout(self.export_menu)
+        # Add seperator if both table and plot exist
+        if has_table and has_plot:
+            export_menu.addWidget(vertical_line())
 
         # Export Table
-        if hasattr(self, 'table') and self.export_menu:
+        if has_table:
+            export_table = QHBoxLayout()
+            export_table_label = QLabel("Export table:")
+            self.export_table_buttons_copy = QPushButton("Copy")
+            self.export_table_buttons_csv = QPushButton(".csv")
+            self.export_table_buttons_excel = QPushButton("Excel")
             self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
             self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
             self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
+            export_table.addWidget(export_table_label)
+            export_table.addWidget(self.export_table_buttons_copy)
+            export_table.addWidget(self.export_table_buttons_csv)
+            export_table.addWidget(self.export_table_buttons_excel)
+            export_menu.addLayout(export_table)
 
-        # Export Plot
-        if hasattr(self, 'plot') and self.export_menu:
-            self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-            self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
+        export_menu.addStretch()
+        return export_menu
 
 
 class InventoryTab(NewAnalysisTab):
@@ -565,7 +566,8 @@ class InventoryTab(NewAnalysisTab):
         self.table.table_name = 'Inventory_' + self.parent.cs_name
         self.layout.addWidget(self.table)
 
-        self.add_export()
+        export = self.build_export(has_plot=False, has_table=True)
+        self.layout.addLayout(export)
         self.connect_signals()
 
     def connect_signals(self):
@@ -678,8 +680,8 @@ class LCAScoresTab(NewAnalysisTab):
         self.plot.plot_name = 'LCA scores_' + self.parent.cs_name
         self.layout.addWidget(self.plot)
 
-        self.add_export()
-        # self.parent.addTab(self, "LCA scores")
+        export = self.build_export(has_plot=True, has_table=False)
+        self.layout.addLayout(export)
 
         self.connect_signals()
 
@@ -803,14 +805,12 @@ class ContributionTab(AnalysisTab):
         self.main_space_tb_grph_plot.stateChanged.connect(
             lambda: self.main_space_check(self.main_space_tb_grph_table, self.main_space_tb_grph_plot))
         # Export Table
-        if self.table and self.export_menu:
-            self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
-            self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
-            self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
+        self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
+        self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
+        self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
         # Export Plot
-        if self.plot and self.export_menu:
-            self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-            self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
+        self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
+        self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
 
     def update_dataframe(self):
         """Updates the underlying dataframe. Implement in sublass.
@@ -950,7 +950,8 @@ class MonteCarloTab(NewAnalysisTab):
         self.plot.hide()
         self.plot.plot_name = 'MonteCarlo_' + self.parent.cs_name
         self.layout.addWidget(self.plot)
-        self.add_export()
+        self.export_widget = self.build_export(has_plot=True, has_table=True)
+        self.layout.addWidget(self.export_widget)
         self.layout.setAlignment(QtCore.Qt.AlignTop)
         self.connect_signals()
 
@@ -973,15 +974,13 @@ class MonteCarloTab(NewAnalysisTab):
             )
 
         # Export Plot
-        if self.plot and self.export_menu:
-            self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-            self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
+        self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
+        self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
 
         # Export Table
-        if self.table and self.export_menu:
-            self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
-            self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
-            self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
+        self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
+        self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
+        self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
 
     def add_MC_ui_elements(self):
         self.layout_mc = QVBoxLayout()
@@ -1043,51 +1042,16 @@ class MonteCarloTab(NewAnalysisTab):
 
         self.layout.addLayout(self.layout_mc)
 
-    def add_export(self):
-        """ Add the export menu to the tab. """
-
-        self.export_menu = QHBoxLayout()
-
-        # Export Plot
-        self.export_plot = QHBoxLayout()
-        self.export_plot_label = QLabel("Export plot:")
-        self.export_plot_buttons_png = QPushButton(".png")
-        self.export_plot_buttons_svg = QPushButton(".svg")
-        # Export Table
-        self.export_table = QHBoxLayout()
-        self.export_table_label = QLabel("Export table:")
-        self.export_table_buttons_copy = QPushButton("Copy")
-        self.export_table_buttons_csv = QPushButton(".csv")
-        self.export_table_buttons_excel = QPushButton("Excel")
-        # Assemble export plot
-        self.export_plot.addWidget(self.export_plot_label)
-        self.export_plot.addWidget(self.export_plot_buttons_png)
-        self.export_plot.addWidget(self.export_plot_buttons_svg)
-        # Assemble export table
-        self.export_table.addWidget(self.export_table_label)
-        self.export_table.addWidget(self.export_table_buttons_copy)
-        self.export_table.addWidget(self.export_table_buttons_csv)
-        self.export_table.addWidget(self.export_table_buttons_excel)
-
-        # Assemble export menu
-        if self.plot:
-            self.export_menu.addLayout(self.export_plot)
-        if self.table and self.plot:
-            self.export_menu_vert_line = vertical_line()
-            self.export_menu.addWidget(self.export_menu_vert_line)
-        if self.table:
-            self.export_menu.addLayout(self.export_table)
-        self.export_menu.addStretch()
-
-        # self.layout.addWidget(horizontal_line())
-        # self.layout.addLayout(self.export_menu)
-
-        # set layout to export widget
-        self.export_widget = QWidget()
-        self.export_widget.setLayout(self.export_menu)
-        # add widget, but hide until MC is calculated
-        self.layout.addWidget(self.export_widget)
-        self.export_widget.hide()
+    def build_export(self, has_table: bool = True, has_plot: bool = True) -> QWidget:
+        """ Construct the export layout but set it into a widget because we
+         want to hide it.
+        """
+        export_layout = super().build_export(has_table, has_plot)
+        export_widget = QWidget()
+        export_widget.setLayout(export_layout)
+        # Hide widget until MC is calculated
+        export_widget.hide()
+        return export_widget
 
     def calculate_MC_LCA(self):
         iterations = int(self.iterations.text())
