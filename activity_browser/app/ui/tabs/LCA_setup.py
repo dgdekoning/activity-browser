@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 from PySide2 import QtWidgets
 from brightway2 import calculation_setups
-from presamples import PresampleResource
 
 from ...signals import signals
 from ..icons import qicons
 from ..style import horizontal_line, header
-from ..tables import CSActivityTable, CSList, CSMethodsTable
+from ..tables import CSActivityTable, CSList, CSMethodsTable, PresamplesList
 
 """
 Lifecycle of a calculation setup
@@ -86,7 +85,7 @@ class LCASetupTab(QtWidgets.QWidget):
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.presamples_label = QtWidgets.QLabel("Use prepared scenario presamples:")
-        self.presamples_list = QtWidgets.QComboBox()
+        self.presamples_list = PresamplesList()
         self.presamples_button = QtWidgets.QPushButton(qicons.calculate, "Calculate with presamples")
 
         name_row = QtWidgets.QHBoxLayout()
@@ -156,7 +155,7 @@ class LCASetupTab(QtWidgets.QWidget):
 
     def presamples_calculation(self):
         signals.lca_presamples_calculation.emit(
-            self.list_widget.name, self.presamples_list.currentText()
+            self.list_widget.name, self.presamples_list.selection
         )
 
     def set_default_calculation_setup(self):
@@ -171,12 +170,9 @@ class LCASetupTab(QtWidgets.QWidget):
     def valid_presamples(self):
         """ Determine if calculate with presamples is active.
         """
-        valid = False
-        self.presamples_list.clear()
-        if self.calculate_button.isEnabled() and PresampleResource.select().exists():
-            valid = True
-            resources = [r.name for r in PresampleResource.select(PresampleResource.name)]
-            self.presamples_list.addItems(resources)
+        valid = self.calculate_button.isEnabled() and self.presamples_list.has_packages
+        if valid:
+            self.presamples_list.sync()
         self.presamples_list.setEnabled(valid)
         self.presamples_button.setEnabled(valid)
 

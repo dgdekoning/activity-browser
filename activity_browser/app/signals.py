@@ -60,6 +60,10 @@ class Signals(QObject):
     # Pass the key of the activity holding the exchange
     exchange_formula_changed = Signal(tuple)
 
+    # Presamples
+    presample_package_created = Signal(str)
+    presample_package_removed = Signal()
+
     # Calculation Setups
     new_calculation_setup = Signal()
     delete_calculation_setup = Signal(str)
