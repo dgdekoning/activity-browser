@@ -217,10 +217,13 @@ class PresamplesParameterManager(object):
         return ps_id, ps_path
 
     @staticmethod
-    def store_presamples_as_resource(name: str, path: str) -> Optional[ps.PresampleResource]:
+    def store_presamples_as_resource(name: str, path: str, description: str = None) -> Optional[ps.PresampleResource]:
         if not name or not path:
             return
-        resource = ps.PresampleResource.create(name=name, path=path)
+        data = {"name": name, "path": path}
+        if description:
+            data["description"] = description
+        resource = ps.PresampleResource.create(**data)
         return resource
 
 

@@ -328,5 +328,7 @@ class PresamplesTab(BaseRightTab):
         )
         if ok and name:
             ppm = PresamplesParameterManager.construct()
-            ps_id, path = ppm.presamples_from_scenarios(name, self.tbl.iterate_scenarios())
-            ppm.store_presamples_as_resource(name, path)
+            names, data = zip(*self.tbl.iterate_scenarios())
+            ps_id, path = ppm.presamples_from_scenarios(name, zip(names, data))
+            description = "{}".format(tuple(names))
+            ppm.store_presamples_as_resource(name, path, description)
