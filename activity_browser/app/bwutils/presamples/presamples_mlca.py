@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from ast import literal_eval
+from typing import List
+
 import brightway2 as bw
 import presamples as ps
 
@@ -61,3 +64,18 @@ class PresamplesMLCA(MLCA):
                 self.current = 0
         # Recalculate everything, replacing all of the LCA data
         self._perform_calculations()
+
+    def get_scenario_names(self) -> List[str]:
+        description = self.resource.description
+        if description is None:
+            return ["Scenario{}".format(i) for i in range(self.total)]
+        # Attempt to convert the string description
+        try:
+            literal = literal_eval(description)
+            if isinstance(literal, (tuple, list, dict)):
+                return list(literal)
+            else:
+                raise ValueError("Can't process description: '{}'".format(literal))
+        except ValueError as e:
+            print(e)
+            return ["Scenario{}".format(i) for i in range(self.total)]

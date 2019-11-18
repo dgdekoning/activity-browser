@@ -131,7 +131,7 @@ class LCAResultsSubTab(QTabWidget):
                 if combobox and not visible:
                     combobox.setVisible(False)
                 elif combobox and visible:
-                    combobox.addItems(self.get_scenarios())
+                    combobox.addItems(self.mlca.get_scenario_names())
 
     def _update_tabs(self):
         self.tabs.inventory.clear_tables()
@@ -144,11 +144,6 @@ class LCAResultsSubTab(QTabWidget):
         # self.correlations_tab = CorrelationsTab(self)
         # self.correlations_tab.update_analysis_tab()
         self.tabs.sankey.update_calculation_setup(cs_name=self.cs_name)
-
-    def get_scenarios(self) -> List[str]:
-        if self.ps_name is None or not isinstance(self.mlca, PresamplesMLCA):
-            raise TypeError("Using the wrong MLCA class to select scenarios")
-        return ["Scenario{}".format(i + 1) for i in range(self.mlca.total)]
 
     @QtCore.Slot(int)
     def update_scenario_data(self, index: int) -> None:
