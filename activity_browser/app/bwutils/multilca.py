@@ -148,8 +148,6 @@ class MLCA(object):
         self.process_contributions = np.zeros(
             (len(self.func_units), len(self.methods), self.lca.technosphere_matrix.shape[0]))
 
-        self._perform_calculations()
-
         # TODO: get rid of the below
         self.func_unit_translation_dict = {
             str(bw.get_activity(list(func_unit.keys())[0])): func_unit for func_unit in self.func_units
@@ -196,6 +194,9 @@ class MLCA(object):
                 self.elementary_flow_contributions[row, col] = np.array(
                     self.lca.characterized_inventory.sum(axis=1)).ravel()
                 self.process_contributions[row, col] = self.lca.characterized_inventory.sum(axis=0)
+
+    def calculate(self):
+        self._perform_calculations()
 
     @property
     def func_units_dict(self) -> dict:

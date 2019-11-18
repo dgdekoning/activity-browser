@@ -104,6 +104,7 @@ class LCAResultsSubTab(QTabWidget):
             self.mlca = MLCA(self.cs_name)
         else:
             self.mlca = PresamplesMLCA(self.cs_name, self.ps_name)
+        self.mlca.calculate()
         self.contributions = Contributions(self.mlca)
         try:
             self.mc = CSMonteCarloLCA(self.cs_name)
