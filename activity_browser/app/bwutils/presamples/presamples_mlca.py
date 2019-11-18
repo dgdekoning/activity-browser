@@ -21,8 +21,8 @@ class PresamplesMLCA(MLCA):
         if not self.resource:
             raise ValueError("Presamples resource with name '{}' not found.".format(ps_name))
         super().__init__(cs_name)
-        idx = next(iter(self.lca.presamples.matrix_indexer))
-        self.total = idx.ncols
+        data = self.resource.metadata
+        self.total = data.get("ncols", 1)
         self.current = 0
 
     def _construct_lca(self) -> bw.LCA:
