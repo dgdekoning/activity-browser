@@ -59,6 +59,7 @@ Tabs = namedtuple(
 Relativity = namedtuple("relativity", ("relative", "absolute"))
 ExportTable = namedtuple("export_table", ("label", "copy", "csv", "excel"))
 ExportPlot = namedtuple("export_plot", ("label", "png", "svg"))
+PlotTableCheck = namedtuple("plot_table_space", ("plot", "table"))
 SwitchButtons = namedtuple("switch_buttons", ("func", "method", "scenario"))
 Combobox = namedtuple(
     "combobox_menu", (
@@ -66,6 +67,7 @@ Combobox = namedtuple(
         "agg", "agg_label",
     )
 )
+
 
 class LCAResultsSubTab(QTabWidget):
     update_scenario_box_index = QtCore.Signal(int)
@@ -182,8 +184,6 @@ class AnalysisTab(QWidget):
         self.table = None
         self.plot = None
         self.scenario_box = QComboBox()
-        self.combobox_menu_method_bool = True
-        self.combobox_menu_func_bool = False
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
@@ -345,15 +345,72 @@ class NewAnalysisTab(QWidget):
         # Important variables optionally used in subclasses
         self.table: Optional[QTableView] = None
         self.plot: Optional[QWidget] = None
-        self.export_plot = ExportPlot(None, None, None)
-        self.export_table = ExportTable(None, None, None, None)
+        self.plot_table: Optional[PlotTableCheck] = None
+        self.relativity: Optional[Relativity] = None
+        self.relative: Optional[bool] = None
+        self.export_plot: Optional[ExportPlot] = None
+        self.export_table: Optional[ExportTable] = None
 
         self.scenario_box = QComboBox()
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
 
+    def build_main_space(self) -> QScrollArea:
+        space = QScrollArea()
+        widget = QWidget()
+        layout = QVBoxLayout()
+        layout.setAlignment(QtCore.Qt.AlignTop)
+        widget.setLayout(layout)
+        space.setWidget(widget)
+        space.setWidgetResizable(True)
+
+        # Option switches
+        self.plot_table = PlotTableCheck(
+            QCheckBox("Plot"), QCheckBox("Table")
+        )
+        self.plot_table.plot.setChecked(True)
+        self.plot_table.table.setChecked(True)
+        self.plot_table.table.stateChanged.connect(self.space_check)
+        self.plot_table.plot.stateChanged.connect(self.space_check)
+
+        # Assemble option row
+        row = QHBoxLayout()
+        row.addWidget(self.plot_table.plot)
+        row.addWidget(self.plot_table.table)
+        row.addWidget(vertical_line())
+        row.addStretch(1)
+        if self.relativity:
+            row.addWidget(self.relativity.relative)
+            row.addWidget(self.relativity.absolute)
+            self.relativity.relative.toggled.connect(self.relativity_check)
+        row.addStretch()
+
+        # Assemble Table and Plot area
+        if self.table and self.plot:
+            layout.addLayout(row)
+        if self.plot:
+            layout.addWidget(self.plot, 1)
+        if self.table:
+            layout.addWidget(self.table)
+        layout.addStretch()
+        return space
+
+    @QtCore.Slot(name="checkboxChanges")
+    def space_check(self):
+        """ Show graph and/or table, whichever is selected.
+
+        Can also hide both, if you want to do that.
+        """
+        self.table.setVisible(self.plot_table.table.isChecked())
+        self.plot.setVisible(self.plot_table.plot.isChecked())
+
+    @QtCore.Slot(bool, name="isRelativeToggled")
+    def relativity_check(self, checked: bool):
+        self.relative = checked
+        self.update_plot_table()
+
     @staticmethod
-    @QtCore.Slot(int)
+    @QtCore.Slot(int, name="setBoxIndex")
     def set_combobox_index(box: QComboBox, index: int) -> None:
         """ Update the index on the given QComboBox without sending a signal.
         """
@@ -368,6 +425,20 @@ class NewAnalysisTab(QWidget):
         box.clear()
         box.insertItems(0, labels)
         box.blockSignals(False)
+
+    def update_tab(self):
+        if self.plot:
+            self.update_plot()
+        if self.table:
+            self.update_table()
+
+    def update_table(self, method=None, *args, **kwargs):
+        """ Update the table. """
+        self.table.sync(*args, **kwargs)
+
+    def update_plot(self, method=None):
+        """Updates the plot. Method will be added in subclass."""
+        raise NotImplementedError
 
     def build_export(self, has_table: bool = True, has_plot: bool = True) -> QHBoxLayout:
         """ Construct a custom export button layout. """
