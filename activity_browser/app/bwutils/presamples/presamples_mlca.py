@@ -23,7 +23,28 @@ class PresamplesMLCA(MLCA):
         super().__init__(cs_name)
         data = self.resource.metadata
         self.total = data.get("ncols", 1)
-        self.current = 0
+        self._current_index = 0
+
+        # Rebuild numpy arrays with presample dimension included.
+        self.lca_scores = np.zeros((len(self.func_units), len(self.methods), self.total))
+        self.elementary_flow_contributions = np.zeros((
+            len(self.func_units), len(self.methods), self.total,
+            self.lca.biosphere_matrix.shape[0]
+        ))
+        self.process_contributions = np.zeros((
+            len(self.func_units), len(self.methods), self.total,
+            self.lca.technosphere_matrix.shape[0]
+        ))
+
+    @property
+    def current(self) -> int:
+        return self._current_index
+
+    @current.setter
+    def current(self, current: int) -> None:
+        """ Ensure current index is looped to 0 if end of array is reached.
+        """
+        self._current_index = current if current < self.total else 0
 
     def _construct_lca(self) -> bw.LCA:
         return bw.LCA(
