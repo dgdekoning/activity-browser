@@ -58,7 +58,13 @@ Tabs = namedtuple(
 Relativity = namedtuple("relativity", ("relative", "absolute"))
 ExportTable = namedtuple("export_table", ("label", "copy", "csv", "excel"))
 ExportPlot = namedtuple("export_plot", ("label", "png", "svg"))
-
+SwitchButtons = namedtuple("switch_buttons", ("func", "method", "scenario"))
+Combobox = namedtuple(
+    "combobox_menu", (
+        "func", "func_label", "method", "method_label", "label",
+        "agg", "agg_label",
+    )
+)
 
 class LCAResultsSubTab(QTabWidget):
     update_scenario_box_index = QtCore.Signal(int)
