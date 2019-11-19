@@ -52,9 +52,11 @@ def get_unit(method: tuple, relative: bool = False) -> str:
 
 # Special namedtuple for the LCAResults TabWidget.
 Tabs = namedtuple(
-    "tabs", ["inventory", "results", "ef", "process", "mc", "sankey"]
+    "tabs", ("inventory", "results", "ef", "process", "mc", "sankey")
 )
-Relativity = namedtuple("relativity", ["relative", "absolute"])
+Relativity = namedtuple("relativity", ("relative", "absolute"))
+ExportTable = namedtuple("export_table", ("label", "copy", "csv", "excel"))
+ExportPlot = namedtuple("export_plot", ("label", "png", "svg"))
 
 
 class LCAResultsSubTab(QTabWidget):
@@ -457,11 +459,8 @@ class NewAnalysisTab(QWidget):
         # Important variables optionally used in subclasses
         self.table: Optional[QTableView] = None
         self.plot: Optional[QWidget] = None
-        self.export_plot_buttons_png: Optional[QPushButton] = None
-        self.export_plot_buttons_svg: Optional[QPushButton] = None
-        self.export_table_buttons_copy: Optional[QPushButton] = None
-        self.export_table_buttons_csv: Optional[QPushButton] = None
-        self.export_table_buttons_excel: Optional[QPushButton] = None
+        self.export_plot = ExportPlot(None, None, None)
+        self.export_table = ExportTable(None, None, None, None)
 
         self.scenario_box = QComboBox()
         self.layout = QVBoxLayout()
@@ -490,16 +489,17 @@ class NewAnalysisTab(QWidget):
 
         # Export Plot
         if has_plot:
-            export_plot = QHBoxLayout()
-            export_plot_label = QLabel("Export plot:")
-            self.export_plot_buttons_png = QPushButton(".png")
-            self.export_plot_buttons_svg = QPushButton(".svg")
-            self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-            self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
-            export_plot.addWidget(export_plot_label)
-            export_plot.addWidget(self.export_plot_buttons_png)
-            export_plot.addWidget(self.export_plot_buttons_svg)
-            export_menu.addLayout(export_plot)
+            plot_layout = QHBoxLayout()
+            self.export_plot = ExportPlot(
+                QLabel("Export plot:"),
+                QPushButton(".png"),
+                QPushButton(".svg"),
+            )
+            self.export_plot.png.clicked.connect(self.plot.to_png)
+            self.export_plot.svg.clicked.connect(self.plot.to_svg)
+            for obj in self.export_plot:
+                plot_layout.addWidget(obj)
+            export_menu.addLayout(plot_layout)
 
         # Add seperator if both table and plot exist
         if has_table and has_plot:
@@ -507,19 +507,19 @@ class NewAnalysisTab(QWidget):
 
         # Export Table
         if has_table:
-            export_table = QHBoxLayout()
-            export_table_label = QLabel("Export table:")
-            self.export_table_buttons_copy = QPushButton("Copy")
-            self.export_table_buttons_csv = QPushButton(".csv")
-            self.export_table_buttons_excel = QPushButton("Excel")
-            self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
-            self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
-            self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
-            export_table.addWidget(export_table_label)
-            export_table.addWidget(self.export_table_buttons_copy)
-            export_table.addWidget(self.export_table_buttons_csv)
-            export_table.addWidget(self.export_table_buttons_excel)
-            export_menu.addLayout(export_table)
+            table_layout = QHBoxLayout()
+            self.export_table = ExportTable(
+                QLabel("Export table:"),
+                QPushButton("Copy"),
+                QPushButton(".csv"),
+                QPushButton("Excel"),
+            )
+            self.export_table.copy.clicked.connect(self.table.to_clipboard)
+            self.export_table.csv.clicked.connect(self.table.to_csv)
+            self.export_table.excel.clicked.connect(self.table.to_excel)
+            for obj in self.export_table:
+                table_layout.addWidget(obj)
+            export_menu.addLayout(table_layout)
 
         export_menu.addStretch()
         return export_menu
@@ -970,15 +970,6 @@ class MonteCarloTab(NewAnalysisTab):
             self.parent.update_scenario_box_index.connect(
                 lambda index: self.set_combobox_index(self.scenario_box, index)
             )
-
-        # Export Plot
-        self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-        self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
-
-        # Export Table
-        self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
-        self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
-        self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
 
     def add_MC_ui_elements(self):
         self.layout_mc = QVBoxLayout()
