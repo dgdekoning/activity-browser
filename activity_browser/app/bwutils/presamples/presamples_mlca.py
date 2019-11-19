@@ -46,11 +46,47 @@ class PresamplesMLCA(MLCA):
         """
         self._current_index = current if current < self.total else 0
 
+    def next_scenario(self):
+        self.lca.presamples.update_matrices(self.lca)
+        self.current += 1
+
     def _construct_lca(self) -> bw.LCA:
         return bw.LCA(
             demand=self.func_units_dict, method=self.methods[0],
             presamples=[self.resource.path]
         )
+
+    def _perform_calculations(self):
+        """ Near copy of `MLCA` class, but includes a loop for all presample
+        arrays.
+        """
+        for ps_col in range(self.total):
+            for row, func_unit in enumerate(self.func_units):
+                self.lca.redo_lci(func_unit)
+                self.scaling_factors.update({
+                    (str(func_unit), ps_col): self.lca.supply_array
+                })
+                self.technosphere_flows.update({
+                    (str(func_unit), ps_col): np.multiply(
+                        self.lca.supply_array, self.lca.technosphere_matrix.diagonal()
+                    )
+                })
+                self.inventory.update({
+                    (str(func_unit), ps_col): np.array(self.lca.inventory.sum(axis=1)).ravel()
+                })
+                self.inventories.update({
+                    (str(func_unit), ps_col): self.lca.inventory
+                })
+
+                for col, cf_matrix in enumerate(self.method_matrices):
+                    self.lca.characterization_matrix = cf_matrix
+                    self.lca.lcia_calculation()
+                    self.lca_scores[row, col, ps_col] = self.lca.score
+                    self.characterized_inventories[(row, col, ps_col)] = self.lca.characterized_inventory.copy()
+                    self.elementary_flow_contributions[row, col, ps_col] = np.array(
+                        self.lca.characterized_inventory.sum(axis=1)).ravel()
+                    self.process_contributions[row, col, ps_col] = self.lca.characterized_inventory.sum(axis=0)
+            self.next_scenario()
 
     def get_steps_to_index(self, index: int) -> int:
         """ Determine how many steps to take when given the index we want
