@@ -4,7 +4,8 @@ from typing import List, Optional, Union
 
 from PySide2.QtWidgets import (
     QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QScrollArea, QRadioButton,
-    QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QTableView
+    QLabel, QLineEdit, QCheckBox, QPushButton, QComboBox, QTableView,
+    QButtonGroup,
 )
 from PySide2 import QtGui, QtCore
 from stats_arrays.errors import InvalidParamsError
@@ -722,6 +723,24 @@ class ContributionTab(AnalysisTab):
     def __init__(self, parent, **kwargs):
         super().__init__(parent)
         self.cutoff_menu = CutoffMenu(self, cutoff_value=0.05)
+        self.combobox_menu = Combobox(
+            func=QComboBox(),
+            func_label="Choose Functional Unit: ",
+            method=QComboBox(),
+            method_label="Choose LCIA Method: ",
+            label=QLabel("Choose LCIA Method: "),
+            agg=QComboBox(),
+            agg_label=QLabel("Aggregate by: "),
+        )
+        # Group the switch buttons to ensure only one can be active
+        self.switches = SwitchButtons(
+            func=QRadioButton("Compare Functional Units"),
+            method=QRadioButton("Compare Impact Categories"),
+            scenario=QRadioButton("Compare Scenarios"),
+        )
+        self.switch_buttons = QButtonGroup()
+        for i, btn in enumerate(self.switches):
+            self.switch_buttons.addButton(btn, i)
 
         self.relativity = Relativity(
             QRadioButton("Relative"),
@@ -734,6 +753,7 @@ class ContributionTab(AnalysisTab):
         self.table = ContributionTable(self)
         self.contribution_type = None
         self.contribution_fn = None
+        self.has_method, self.has_func = False, False
         self.current_method = None
         self.current_func = None
         self.current_agg = None#'none' # Default to no aggregation
@@ -750,47 +770,102 @@ class ContributionTab(AnalysisTab):
         self.relative = checked
         self.update_plot_table()
 
+    def build_combobox(self, has_method: bool = True,
+                       has_func: bool = False) -> QHBoxLayout:
+        """ Construct and return a horizontal layout for picking and
+         choosing what data to show and how.
+        """
+        menu = QHBoxLayout()
+        # Populate the drop-down boxes with their relevant values.
+        self.combobox_menu.func.addItems(
+            list(self.parent.mlca.func_unit_translation_dict.keys())
+        )
+        self.combobox_menu.method.addItems(list(self.parent.method_dict.keys()))
+
+        if has_func:
+            self.combobox_menu.func.scroll = False
+            self.combobox_menu.label.setText(self.combobox_menu.func_label)
+        if has_method:
+            self.combobox_menu.method.scroll = False
+            self.combobox_menu.label.setText(self.combobox_menu.method_label)
+        if has_method and has_func:
+            menu.addStretch(1)
+            menu.addWidget(self.switches.method)
+            self.switches.func.setChecked(True)
+            self.combobox_menu.func.setVisible(False)
+            menu.addWidget(self.switches.func)
+        self.combobox_menu.agg.scroll = False
+
+        # Add scenario dropdown menu here
+        menu.addWidget(self.scenario_box)
+        menu.addWidget(vertical_line())
+        menu.addWidget(self.combobox_menu.label)
+        menu.addWidget(self.combobox_menu.method, 1)
+        menu.addWidget(self.combobox_menu.func, 1)
+        menu.addWidget(self.combobox_menu.agg_label)
+        menu.addWidget(self.combobox_menu.agg)
+        menu.addStretch(1)
+
+        self.has_method = has_method
+        self.has_func = has_func
+        return menu
+
+    @QtCore.Slot(int, name="comboSwitch")
+    def combo_switch(self, button_id: int):
+        """ Show either the functional units or methods combo-box, dependent on button state. """
+        self.update_aggregation_combobox()
+        if self.switches.method.isChecked():
+            self.combobox_menu.func.setVisible(True)
+            self.combobox_menu.method.setVisible(False)
+            self.combobox_menu.label.setText(self.combobox_menu.func_label)
+        elif self.switches.func.isChecked():
+            self.combobox_menu.func.setVisible(False)
+            self.combobox_menu.method.setVisible(True)
+            self.combobox_menu.label.setText(self.combobox_menu.method_label)
+
     def update_aggregation_combobox(self):
         """Contribution-specific aggregation combobox
         """
-        self.aggregator_combobox.blockSignals(True)
-        self.aggregator_combobox.clear()
+        self.combobox_menu.agg.blockSignals(True)
+        self.combobox_menu.agg.clear()
+        aggregator_list = []
         if self.contribution_type == 'EF':
-            self.aggregator_list = self.parent.contributions.DEFAULT_EF_AGGREGATES
+            aggregator_list.extend(self.parent.contributions.DEFAULT_EF_AGGREGATES)
         elif self.contribution_type == 'PC':
-            self.aggregator_list = self.parent.contributions.DEFAULT_ACT_AGGREGATES
-        self.aggregator_combobox.insertItems(0, self.aggregator_list)
-        self.aggregator_combobox.blockSignals(False)
-
-    def combo_switch_check(self):
-        """Show either the functional units or methods combo-box, dependent on button state.
-        """
-        self.update_aggregation_combobox()
-        super().combo_switch_check()
+            aggregator_list.extend(self.parent.contributions.DEFAULT_ACT_AGGREGATES)
+        self.combobox_menu.agg.addItems(aggregator_list)
+        self.combobox_menu.agg.blockSignals(False)
 
     def update_analysis_tab(self):
         """Override and include call to update aggregation combobox"""
-        if self.aggregator_combobox:
+        if self.combobox_menu.agg:
             self.update_aggregation_combobox()
         super().update_analysis_tab()
 
     def connect_signals(self):
         """Override the inherited method to perform the same thing plus aggregation
         """
-        if self.combobox_menu_combobox:
-            if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
-                self.combobox_menu_switch_met.clicked.connect(self.combo_switch_check)
-                self.combobox_menu_switch_fun.clicked.connect(self.combo_switch_check)
+        if self.combobox_menu:
+            if self.has_method and self.has_func:
+                self.switch_buttons.buttonClicked.connect(self.combo_switch)
 
             if self.plot:
-                self.combobox_menu_combobox.currentTextChanged.connect(
-                    lambda name: self.update_plot(method=name))
-                self.aggregator_combobox.currentTextChanged.connect(
+                self.combobox_menu.method.currentTextChanged.connect(
+                    lambda name: self.update_plot(method=name)
+                )
+                self.combobox_menu.func.currentTextChanged.connect(
+                    lambda name: self.update_plot(method=name)
+                )
+                self.combobox_menu.agg.currentTextChanged.connect(
                     lambda a: self.update_plot(aggregator=a))
             if self.table:
-                self.combobox_menu_combobox.currentTextChanged.connect(
-                    lambda name: self.update_table(method=name))
-                self.aggregator_combobox.currentTextChanged.connect(
+                self.combobox_menu.method.currentTextChanged.connect(
+                    lambda name: self.update_table(method=name)
+                )
+                self.combobox_menu.func.currentTextChanged.connect(
+                    lambda name: self.update_table(method=name)
+                )
+                self.combobox_menu.agg.currentTextChanged.connect(
                     lambda a: self.update_table())
 
         # Add wiring for presamples scenarios
@@ -819,7 +894,7 @@ class ContributionTab(AnalysisTab):
         raise NotImplemented
 
     def update_plot(self, method=None, aggregator=None):
-        if self.combobox_menu_label.text() == self.combobox_menu_method_label:
+        if self.combobox_menu.label.text() == self.combobox_menu.method_label:
             if self.current_method and method is None:
                 method = self.current_method
             elif method is None or method == '':
@@ -859,8 +934,9 @@ class ElementaryFlowContributionTab(ContributionTab):
         self.layout.addLayout(get_header_layout('Elementary Flow Contributions'))
         self.layout.addWidget(self.cutoff_menu)
         self.layout.addWidget(horizontal_line())
-
-        self.build_combobox(method=True, func=True)
+        combobox = self.build_combobox(has_method=True, has_func=True)
+        self.layout.addLayout(combobox)
+        self.layout.addWidget(horizontal_line())
         self.add_main_space()
         self.add_export()
 
@@ -884,8 +960,9 @@ class ProcessContributionsTab(ContributionTab):
         self.layout.addLayout(get_header_layout('Process Contributions'))
         self.layout.addWidget(self.cutoff_menu)
         self.layout.addWidget(horizontal_line())
-
-        self.build_combobox(method=True, func=True)
+        combobox = self.build_combobox(has_method=True, has_func=True)
+        self.layout.addLayout(combobox)
+        self.layout.addWidget(horizontal_line())
         self.add_main_space()
         self.add_export()
 
