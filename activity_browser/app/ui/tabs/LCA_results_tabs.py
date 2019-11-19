@@ -55,6 +55,7 @@ def get_unit(method: tuple, relative: bool = False) -> str:
 Tabs = namedtuple(
     "tabs", ["inventory", "results", "ef", "process", "mc", "sankey"]
 )
+Relativity = namedtuple("relativity", ["relative", "absolute"])
 
 
 class LCAResultsSubTab(QTabWidget):
@@ -82,8 +83,8 @@ class LCAResultsSubTab(QTabWidget):
         self.tabs = Tabs(
             inventory=InventoryTab(self),
             results=LCAResultsTab(self),
-            ef=ElementaryFlowContributionTab(self, relativity=True),
-            process=ProcessContributionsTab(self, relativity=True),
+            ef=ElementaryFlowContributionTab(self),
+            process=ProcessContributionsTab(self),
             mc=None if self.mc is None else MonteCarloTab(self),
             sankey=SankeyNavigatorWidget(self.cs_name, parent=self),
         )
@@ -172,8 +173,6 @@ class AnalysisTab(QWidget):
         self.combobox_menu_combobox = None
         self.table = None
         self.plot = None
-        self.relativity = False
-        self.relative = False
         self.scenario_box = QComboBox()
         self.combobox_menu_method_bool = True
         self.combobox_menu_func_bool = False
@@ -313,26 +312,7 @@ class AnalysisTab(QWidget):
         raise NotImplemented
 
     def relativity_button(self, layout):
-        if self.relativity is not None:
-            self.button1 = QRadioButton("Relative")
-            self.button1.setChecked(True)
-            self.button2 = QRadioButton("Absolute")
-            layout.addStretch(1)
-            layout.addWidget(self.button1)
-            layout.addWidget(self.button2)
-            self.button1.clicked.connect(self.relativity_check)
-            self.button2.clicked.connect(self.relativity_check)
-
-    def relativity_check(self):
-        if not self.relative:
-            self.button1.setChecked(True)
-            self.button2.setChecked(False)
-            self.relative = True
-        else:
-            self.button1.setChecked(False)
-            self.button2.setChecked(True)
-            self.relative = False
-        self.update_plot_table()
+        pass
 
     def build_combobox(self, method=True, func=False):
         """ Add the combobox menu to the tab. """
@@ -737,7 +717,10 @@ class ContributionTab(AnalysisTab):
         super().__init__(parent)
         self.cutoff_menu = CutoffMenu(self, cutoff_value=0.05)
 
-        self.relativity = kwargs.get("relative", False)
+        self.relativity = Relativity(
+            QRadioButton("Relative"),
+            QRadioButton("Absolute"),
+        )
         self.relative = True
 
         self.df = None
@@ -748,6 +731,18 @@ class ContributionTab(AnalysisTab):
         self.current_method = None
         self.current_func = None
         self.current_agg = None#'none' # Default to no aggregation
+
+    def relativity_button(self, layout):
+        self.relativity.relative.setChecked(True)
+        layout.addStretch(1)
+        layout.addWidget(self.relativity.relative)
+        layout.addWidget(self.relativity.absolute)
+        self.relativity.relative.toggled.connect(self.relativity_check)
+
+    @QtCore.Slot(bool, name="isRelativeToggled")
+    def relativity_check(self, checked: bool):
+        self.relative = checked
+        self.update_plot_table()
 
     def update_aggregation_combobox(self):
         """Contribution-specific aggregation combobox
