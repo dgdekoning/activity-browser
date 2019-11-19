@@ -182,7 +182,6 @@ class AnalysisTab(QWidget):
     def __init__(self, parent = None):
         super().__init__(parent)
         self.parent = parent
-        self.combobox_menu_combobox = None
         self.table = None
         self.plot = None
         self.scenario_box = QComboBox()
@@ -193,20 +192,6 @@ class AnalysisTab(QWidget):
         self.setLayout(self.layout)
 
     def connect_signals(self):
-        # Combo box signal
-        if self.combobox_menu_combobox:
-            if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
-                self.combobox_menu_switch_met.clicked.connect(self.combo_switch_check)
-                self.combobox_menu_switch_fun.clicked.connect(self.combo_switch_check)
-
-            if self.plot:
-                self.combobox_menu_combobox.currentTextChanged.connect(
-                    lambda name: self.update_plot(method=name))
-
-            if self.table:
-                self.combobox_menu_combobox.currentTextChanged.connect(
-                    lambda name: self.update_table(method=name))
-
         # Mainspace Checkboxes
         self.main_space_tb_grph_table.stateChanged.connect(
             lambda: self.main_space_check(self.main_space_tb_grph_table, self.main_space_tb_grph_plot))
@@ -223,20 +208,6 @@ class AnalysisTab(QWidget):
         if self.plot and self.export_menu:
             self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
             self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
-
-    def combo_switch_check(self):
-        """ Show either the functional units or methods combo-box, dependent on button state. """
-        if self.combo_box_menu_options == "Compare LCIA Methods":
-            self.combo_box_menu_options = "Compare Functional Units"
-            self.combobox_menu_label.setText(self.combobox_menu_method_label)
-            self.combobox_menu_switch_met.setChecked(False)
-            self.combobox_menu_switch_fun.setChecked(True)
-        else:
-            self.combo_box_menu_options = "Compare LCIA Methods"
-            self.combobox_menu_label.setText(self.combobox_menu_func_label)
-            self.combobox_menu_switch_met.setChecked(True)
-            self.combobox_menu_switch_fun.setChecked(False)
-        self.update_combobox()
 
     def main_space_check(self, table_ch, plot_ch):
         """ Show graph and/or table, whichever is selected.
@@ -304,11 +275,6 @@ class AnalysisTab(QWidget):
         self.layout.addWidget(self.main_space)
 
     def update_analysis_tab(self):
-        if self.combobox_menu_combobox:
-            self.update_combobox()
-        self.update_plot_table()
-
-    def update_plot_table(self):
         if self.plot:
             self.update_plot()
         if self.table:
@@ -326,61 +292,6 @@ class AnalysisTab(QWidget):
     def relativity_button(self, layout):
         pass
 
-    def build_combobox(self, method=True, func=False):
-        """ Add the combobox menu to the tab. """
-        self.combobox_menu = QHBoxLayout()
-        self.combobox_menu_label = QLabel()
-
-        self.combobox_menu_switch_met = None
-        self.combobox_menu_method_label = None
-        self.combobox_menu_method_bool = method
-        self.combobox_menu_func_bool = func
-
-        if self.combobox_menu_func_bool:
-            self.combobox_menu_func_label = "Choose Functional Unit: "
-            self.combobox_menu_combobox_func = QComboBox()
-            self.combobox_menu_combobox_func.scroll = False
-            self.combobox_menu_combobox = self.combobox_menu_combobox_func
-            self.combobox_menu_label.setText(self.combobox_menu_func_label)
-
-        if self.combobox_menu_method_bool:
-            self.combobox_menu_method_label = "Choose LCIA Method: "
-            self.combobox_menu_combobox_method = QComboBox()
-            self.combobox_menu_combobox_method.scroll = False
-            self.combobox_menu_combobox = self.combobox_menu_combobox_method
-            self.combobox_menu_label.setText(self.combobox_menu_method_label)
-
-        if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
-            self.combobox_menu.addStretch(1)
-            self.combo_box_menu_options = "Functional Units"
-            self.combobox_menu_switch_met = QRadioButton("Compare LCIA Methods")
-            self.combobox_menu.addWidget(self.combobox_menu_switch_met)
-
-            self.combobox_menu_switch_fun = QRadioButton("Compare Functional Units")
-            self.combobox_menu_switch_fun.setChecked(True)
-
-            self.combobox_menu.addWidget(self.combobox_menu_switch_fun)
-
-        # Add scenario dropdown menu here
-        self.combobox_menu.addWidget(self.scenario_box)
-
-        # Aggregator combobox goes here
-        self.aggregator_label = QLabel("Aggregate by: ")
-        self.aggregator_combobox = QComboBox()
-        self.aggregator_combobox.scroll = False
-
-        self.combobox_menu.addWidget(vertical_line())
-        self.combobox_menu.addWidget(self.combobox_menu_label)
-        self.combobox_menu.addWidget(self.combobox_menu_combobox, 1)
-        self.combobox_menu.addWidget(self.aggregator_label)
-        self.combobox_menu.addWidget(self.aggregator_combobox)
-
-        self.combobox_menu_horizontal = horizontal_line()
-        self.combobox_menu.addStretch(1)
-
-        self.layout.addLayout(self.combobox_menu)
-        self.layout.addWidget(self.combobox_menu_horizontal)
-
     @staticmethod
     @QtCore.Slot(int)
     def set_combobox_index(box: QComboBox, index: int) -> None:
@@ -389,35 +300,6 @@ class AnalysisTab(QWidget):
         box.blockSignals(True)
         box.setCurrentIndex(index)
         box.blockSignals(False)
-
-    def update_combobox(self):
-        """ Update the combobox menu. """
-        self.combobox_menu_combobox.blockSignals(True)
-        self.combobox_menu_combobox.clear()
-        visibility = True
-        if self.combobox_menu_label.text() == self.combobox_menu_method_label: # if is assessment methods
-            self.combobox_list = list(self.parent.method_dict.keys())
-            # if self.parent.single_method:
-            #     visibility = False
-        else:
-            self.combobox_list = list(self.parent.mlca.func_unit_translation_dict.keys())
-            # if self.parent.single_func_unit:
-            #     visibility = False
-        self.combobox_menu_combobox.insertItems(0, self.combobox_list)
-        self.combobox_menu_combobox.blockSignals(False)
-
-        if visibility:
-            self.combobox_menu_label.setVisible(True)
-            self.combobox_menu_combobox.setVisible(True)
-            self.combobox_menu_horizontal.setVisible(True)
-            if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
-                self.combobox_menu_switch_met.setVisible(True)
-        else:
-            self.combobox_menu_label.setVisible(False)
-            self.combobox_menu_combobox.setVisible(False)
-            self.combobox_menu_horizontal.setVisible(False)
-            if self.combobox_menu_method_bool and self.combobox_menu_func_bool:
-                self.combobox_menu_switch_met.setVisible(False)
 
     def add_export(self):
         """ Add the export menu to the tab. """
