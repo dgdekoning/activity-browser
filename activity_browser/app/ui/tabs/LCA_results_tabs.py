@@ -675,7 +675,7 @@ class LCIAResultsTab(AnalysisTab):
         self.table.sync(self.df)
 
 
-class ContributionTab(AnalysisTab):
+class ContributionTab(NewAnalysisTab):
     def __init__(self, parent, **kwargs):
         super().__init__(parent)
         self.cutoff_menu = CutoffMenu(self, cutoff_value=0.05)
@@ -702,6 +702,7 @@ class ContributionTab(AnalysisTab):
             QRadioButton("Relative"),
             QRadioButton("Absolute"),
         )
+        self.relativity.relative.setChecked(True)
         self.relative = True
 
         self.df = None
@@ -713,18 +714,6 @@ class ContributionTab(AnalysisTab):
         self.current_method = None
         self.current_func = None
         self.current_agg = None#'none' # Default to no aggregation
-
-    def relativity_button(self, layout):
-        self.relativity.relative.setChecked(True)
-        layout.addStretch(1)
-        layout.addWidget(self.relativity.relative)
-        layout.addWidget(self.relativity.absolute)
-        self.relativity.relative.toggled.connect(self.relativity_check)
-
-    @QtCore.Slot(bool, name="isRelativeToggled")
-    def relativity_check(self, checked: bool):
-        self.relative = checked
-        self.update_plot_table()
 
     def build_combobox(self, has_method: bool = True,
                        has_func: bool = False) -> QHBoxLayout:
@@ -796,7 +785,7 @@ class ContributionTab(AnalysisTab):
         """Override and include call to update aggregation combobox"""
         if self.combobox_menu.agg:
             self.update_aggregation_combobox()
-        super().update_analysis_tab()
+        super().update_tab()
 
     def connect_signals(self):
         """Override the inherited method to perform the same thing plus aggregation
@@ -830,19 +819,6 @@ class ContributionTab(AnalysisTab):
             self.parent.update_scenario_box_index.connect(
                 lambda index: self.set_combobox_index(self.scenario_box, index)
             )
-
-        # Mainspace Checkboxes
-        self.main_space_tb_grph_table.stateChanged.connect(
-            lambda: self.main_space_check(self.main_space_tb_grph_table, self.main_space_tb_grph_plot))
-        self.main_space_tb_grph_plot.stateChanged.connect(
-            lambda: self.main_space_check(self.main_space_tb_grph_table, self.main_space_tb_grph_plot))
-        # Export Table
-        self.export_table_buttons_copy.clicked.connect(self.table.to_clipboard)
-        self.export_table_buttons_csv.clicked.connect(self.table.to_csv)
-        self.export_table_buttons_excel.clicked.connect(self.table.to_excel)
-        # Export Plot
-        self.export_plot_buttons_png.clicked.connect(self.plot.to_png)
-        self.export_plot_buttons_svg.clicked.connect(self.plot.to_svg)
 
     def update_dataframe(self):
         """Updates the underlying dataframe. Implement in sublass.
@@ -893,8 +869,10 @@ class ElementaryFlowContributionTab(ContributionTab):
         combobox = self.build_combobox(has_method=True, has_func=True)
         self.layout.addLayout(combobox)
         self.layout.addWidget(horizontal_line())
-        self.add_main_space()
-        self.add_export()
+        space = self.build_main_space()
+        self.layout.addWidget(space)
+        export = self.build_export(True, True)
+        self.layout.addLayout(export)
 
         self.contribution_type = 'EF'
         self.contribution_fn = 'EF contributions'
@@ -919,8 +897,10 @@ class ProcessContributionsTab(ContributionTab):
         combobox = self.build_combobox(has_method=True, has_func=True)
         self.layout.addLayout(combobox)
         self.layout.addWidget(horizontal_line())
-        self.add_main_space()
-        self.add_export()
+        space = self.build_main_space()
+        self.layout.addWidget(space)
+        export = self.build_export(True, True)
+        self.layout.addLayout(export)
 
         self.contribution_type = 'PC'
         self.contribution_fn = 'Process contributions'
