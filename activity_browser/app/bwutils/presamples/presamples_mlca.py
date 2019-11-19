@@ -52,6 +52,12 @@ class PresamplesMLCA(MLCA):
         self.lca.presamples.update_matrices(self.lca)
         self.current += 1
 
+    def set_scenario(self, index: int) -> None:
+        """ Set the current scenario index given a new index to go to
+        """
+        steps = self._get_steps_to_index(index)
+        self.current = steps[-1] + 1  # Walk the steps to the new index
+
     def _construct_lca(self) -> bw.LCA:
         return bw.LCA(
             demand=self.func_units_dict, method=self.methods[0],
@@ -104,7 +110,7 @@ class PresamplesMLCA(MLCA):
         if isinstance(obj, np.ndarray):
             return obj[:, :, self.current]
 
-    def get_steps_to_index(self, index: int) -> int:
+    def _get_steps_to_index(self, index: int) -> list:
         """ Determine how many steps to take when given the index we want
          to land on.
 
@@ -117,26 +123,9 @@ class PresamplesMLCA(MLCA):
         elif index >= self.total:
             raise ValueError("Given index is not possible for current presamples dataset")
         if index < self.current:
-            return len(range(index)) + len(range(self.current, self.total))
+            return [*range(self.current, self.total), *range(index)]
         else:
-            return len(range(self.current, index))
-
-    def calculate_scenario(self, steps: int = 1) -> None:
-        """ Update the LCA matrices with the presamples arrays and redo
-         the calculations.
-
-        Setting a `steps` value allows us to avoid running all the calculations
-         if we only want to look at (for example) the 1st and 5th scenarios.
-        """
-        # Iterate through the alternate matrices until the correct
-        # one is reached
-        for _ in range(steps):
-            self.lca.presamples.update_matrices(self.lca)
-            self.current += 1
-            if self.current == self.total:
-                self.current = 0
-        # Recalculate everything, replacing all of the LCA data
-        self._perform_calculations()
+            return list(range(self.current, index))
 
     def get_scenario_names(self) -> List[str]:
         description = self.resource.description

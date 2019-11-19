@@ -10,7 +10,8 @@ from PySide2 import QtGui, QtCore
 from stats_arrays.errors import InvalidParamsError
 
 from ...bwutils import (
-    Contributions, CSMonteCarloLCA, MLCA, PresamplesMLCA, commontasks as bc
+    Contributions, CSMonteCarloLCA, MLCA, PresamplesContributions,
+    PresamplesMLCA, commontasks as bc
 )
 from ...signals import signals
 from ..figures import (
@@ -102,10 +103,11 @@ class LCAResultsSubTab(QTabWidget):
         """ Update the mlca calculation. """
         if self.ps_name is None:
             self.mlca = MLCA(self.cs_name)
+            self.contributions = Contributions(self.mlca)
         else:
             self.mlca = PresamplesMLCA(self.cs_name, self.ps_name)
+            self.contributions = PresamplesContributions(self.mlca)
         self.mlca.calculate()
-        self.contributions = Contributions(self.mlca)
         try:
             self.mc = CSMonteCarloLCA(self.cs_name)
         except InvalidParamsError as e:
@@ -152,8 +154,7 @@ class LCAResultsSubTab(QTabWidget):
         """
         if index == self.mlca.current:
             return
-        steps = self.mlca.get_steps_to_index(index)
-        self.mlca.calculate_scenario(steps)
+        self.mlca.set_scenario(index)
         self._update_tabs()
         self.update_scenario_box_index.emit(index)
 
