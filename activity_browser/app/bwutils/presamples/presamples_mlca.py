@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 from ast import literal_eval
-from typing import List
+from typing import List, Union
 
 import brightway2 as bw
+import numpy as np
+import pandas as pd
 import presamples as ps
 
-from ..multilca import MLCA
+from ..multilca import MLCA, Contributions
 
 
 class PresamplesMLCA(MLCA):
@@ -88,6 +90,20 @@ class PresamplesMLCA(MLCA):
                     self.process_contributions[row, col, ps_col] = self.lca.characterized_inventory.sum(axis=0)
             self.next_scenario()
 
+    @property
+    def lca_scores_normalized(self) -> np.ndarray:
+        """Normalize LCA scores by impact assessment method.
+        """
+        return self.lca_scores[:, :, self.current] / self.lca_scores[:, :, self.current].max(axis=0)
+
+    def slice(self, obj: Union[dict, np.ndarray]) -> Union[dict, np.ndarray]:
+        """ Return a slice of the given object for the current presample array.
+        """
+        if isinstance(obj, dict):
+            return {k[0]: v for k, v in obj.items() if k[1] == self.current}
+        if isinstance(obj, np.ndarray):
+            return obj[:, :, self.current]
+
     def get_steps_to_index(self, index: int) -> int:
         """ Determine how many steps to take when given the index we want
          to land on.
@@ -136,3 +152,27 @@ class PresamplesMLCA(MLCA):
         except ValueError as e:
             print(e)
             return ["Scenario{}".format(i) for i in range(self.total)]
+
+
+class PresamplesContributions(Contributions):
+    def __init__(self, mlca):
+        if not isinstance(mlca, PresamplesMLCA):
+            raise TypeError("Must pass a PresamplesMLCA object. Passed: {}".format(type(mlca)))
+        super().__init__(mlca)
+
+    def _build_inventory(self, inventory: dict, indices: dict, columns: list,
+                         fields: list) -> pd.DataFrame:
+        inventory = self.mlca.slice(inventory)
+        return super()._build_inventory(inventory, indices, columns, fields)
+
+    def lca_scores_df(self, normalized: bool = False) -> pd.DataFrame:
+        """Returns a metadata-annotated DataFrame of the LCA scores.
+        """
+        scores = self.mlca.slice(self.mlca.lca_scores) if not normalized else self.mlca.lca_scores_normalized
+        return super()._build_lca_scores_df(
+            scores, self.mlca.fu_activity_keys, self.mlca.methods, self.act_fields
+        )
+
+    def _build_contributions(self, data: np.ndarray, index: int, axis: int) -> np.ndarray:
+        data = self.mlca.slice(data)
+        return super()._build_contributions(data, index, axis)
