@@ -638,7 +638,7 @@ class LCAScoresTab(NewAnalysisTab):
         self.plot.plot_name = '_'.join([self.parent.cs_name, 'LCA scores', str(method)])
 
 
-class LCIAResultsTab(AnalysisTab):
+class LCIAResultsTab(NewAnalysisTab):
     def __init__(self, parent, **kwargs):
         super(LCIAResultsTab, self).__init__(parent, **kwargs)
         self.parent = parent
@@ -649,13 +649,10 @@ class LCIAResultsTab(AnalysisTab):
         self.plot.plot_name = self.parent.cs_name + '_LCIA results'
         self.table = LCAResultsTable(self.parent)
         self.table.table_name = self.parent.cs_name + '_LCIA results'
-
-        self.add_main_space()
-        self.add_export()
-
-        # self.parent.addTab(self, self.header_text)
-        self.connect_signals()
         self.relative = False
+
+        self.layout.addWidget(self.build_main_space())
+        self.layout.addLayout(self.build_export(True, True))
 
     def update_plot(self):
         if not isinstance(self.plot, LCAResultsPlot):
@@ -906,9 +903,9 @@ class ProcessContributionsTab(ContributionTab):
             limit_type=self.cutoff_menu.limit_type, normalize=self.relative)
 
 
-class CorrelationsTab(AnalysisTab):
+class CorrelationsTab(NewAnalysisTab):
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, **kwargs)
+        super().__init__(parent)
         self.parent = parent
 
         self.tab_text = "Correlations"
@@ -917,12 +914,10 @@ class CorrelationsTab(AnalysisTab):
         if not self.parent.single_func_unit:
             self.plot = CorrelationPlot(self.parent)
 
-        self.add_main_space()
-        self.add_export()
-
-        self.parent.addTab(self, self.tab_text)
-
-        self.connect_signals()
+        self.layout.addWidget(self.build_main_space())
+        self.layout.addLayout(self.build_export(
+            has_table=False, has_plot=not self.parent.single_func_unit
+        ))
 
     def update_plot(self):
         if isinstance(self.plot, CorrelationPlot):
