@@ -470,11 +470,9 @@ class LCAScoresTab(NewAnalysisTab):
 
     def update_tab(self):
         self.update_combobox(self.combobox, [str(m) for m in self.parent.mlca.methods])
-        self.update_plot(method_index=0)
+        super().update_tab()
 
-    def update_plot(self, method_index=None):
-        if method_index is None or isinstance(method_index, str):
-            method_index = 0
+    def update_plot(self, method_index: int = 0):
         method = self.parent.mlca.methods[method_index]
         self.plot.plot(self.parent.mlca, method=method)
         self.plot.plot_name = '_'.join([self.parent.cs_name, 'LCA scores', str(method)])
