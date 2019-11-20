@@ -595,7 +595,6 @@ class ContributionTab(NewAnalysisTab):
     @QtCore.Slot(int, name="comboSwitch")
     def combo_switch(self, button_id: int):
         """ Show either the functional units or methods combo-box, dependent on button state. """
-        self.update_aggregation_combobox()
         if self.switches.method.isChecked():
             self.combobox_menu.func.setVisible(True)
             self.combobox_menu.method.setVisible(False)
@@ -604,6 +603,7 @@ class ContributionTab(NewAnalysisTab):
             self.combobox_menu.func.setVisible(False)
             self.combobox_menu.method.setVisible(True)
             self.combobox_menu.label.setText(self.combobox_menu.method_label)
+        self.update_tab()
 
     def update_aggregation_combobox(self):
         """Contribution-specific aggregation combobox
