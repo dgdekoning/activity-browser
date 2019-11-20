@@ -25,12 +25,7 @@ from ..widgets import CutoffMenu
 from ..web.graphnav import SankeyNavigatorWidget
 
 
-# TODO: This module needs a revision
-# - LCA Results tabs inherit from AnalysisTab, which is still a bit overly complex, and NewAnalysis Tab,
-# which is an attempt for simplification; perhaps the best solution would be to outsource more of the visual elements
-# generation to functions, like those below
-
-def get_header_layout(header_text="A new Widget"):
+def get_header_layout(header_text: str) -> QVBoxLayout:
     vlayout = QVBoxLayout()
     vlayout.addWidget(header(header_text))
     vlayout.addWidget(horizontal_line())
