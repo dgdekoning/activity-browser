@@ -410,7 +410,7 @@ class NewAnalysisTab(QWidget):
     @QtCore.Slot(bool, name="isRelativeToggled")
     def relativity_check(self, checked: bool):
         self.relative = checked
-        self.update_plot_table()
+        self.update_tab()
 
     @staticmethod
     @QtCore.Slot(int, name="setBoxIndex")
@@ -509,8 +509,7 @@ class InventoryTab(NewAnalysisTab):
         self.table.table_name = 'Inventory_' + self.parent.cs_name
         self.layout.addWidget(self.table)
 
-        export = self.build_export(has_plot=False, has_table=True)
-        self.layout.addLayout(export)
+        self.layout.addLayout(self.build_export(has_plot=False, has_table=True))
         self.connect_signals()
 
     def connect_signals(self):
@@ -623,8 +622,7 @@ class LCAScoresTab(NewAnalysisTab):
         self.plot.plot_name = 'LCA scores_' + self.parent.cs_name
         self.layout.addWidget(self.plot)
 
-        export = self.build_export(has_plot=True, has_table=False)
-        self.layout.addLayout(export)
+        self.layout.addLayout(self.build_export(has_plot=True, has_table=False))
 
         self.connect_signals()
 
@@ -869,10 +867,8 @@ class ElementaryFlowContributionTab(ContributionTab):
         combobox = self.build_combobox(has_method=True, has_func=True)
         self.layout.addLayout(combobox)
         self.layout.addWidget(horizontal_line())
-        space = self.build_main_space()
-        self.layout.addWidget(space)
-        export = self.build_export(True, True)
-        self.layout.addLayout(export)
+        self.layout.addWidget(self.build_main_space())
+        self.layout.addLayout(self.build_export(True, True))
 
         self.contribution_type = 'EF'
         self.contribution_fn = 'EF contributions'
@@ -897,10 +893,8 @@ class ProcessContributionsTab(ContributionTab):
         combobox = self.build_combobox(has_method=True, has_func=True)
         self.layout.addLayout(combobox)
         self.layout.addWidget(horizontal_line())
-        space = self.build_main_space()
-        self.layout.addWidget(space)
-        export = self.build_export(True, True)
-        self.layout.addLayout(export)
+        self.layout.addWidget(self.build_main_space())
+        self.layout.addLayout(self.build_export(True, True))
 
         self.contribution_type = 'PC'
         self.contribution_fn = 'Process contributions'
