@@ -152,12 +152,12 @@ class LCAResultsSubTab(QTabWidget):
         self.tabs.inventory.clear_tables()
         self.tabs.inventory.update_table()
         self.tabs.results.update_tab()
-        self.tabs.ef.update_analysis_tab()
-        self.tabs.process.update_analysis_tab()
+        self.tabs.ef.update_tab()
+        self.tabs.process.update_tab()
         if self.mc:
             self.tabs.mc.update_tab()
         # self.correlations_tab = CorrelationsTab(self)
-        # self.correlations_tab.update_analysis_tab()
+        # self.correlations_tab.update_tab()
         self.tabs.sankey.update_calculation_setup(cs_name=self.cs_name)
 
     @QtCore.Slot(int)
@@ -432,11 +432,11 @@ class NewAnalysisTab(QWidget):
         if self.table:
             self.update_table()
 
-    def update_table(self, method=None, *args, **kwargs):
+    def update_table(self, *args, **kwargs):
         """ Update the table. """
         self.table.sync(*args, **kwargs)
 
-    def update_plot(self, method=None):
+    def update_plot(self, *args, **kwargs):
         """Updates the plot. Method will be added in subclass."""
         raise NotImplementedError
 
@@ -521,15 +521,15 @@ class InventoryTab(NewAnalysisTab):
     def button_clicked(self):
         """Update table according to radiobutton selected."""
         if self.radio_button_technosphere.isChecked():
-            self.update_table(type='technosphere')
+            self.update_table(inventory='technosphere')
             self.table.table_name = self.parent.cs_name + '_Inventory_technosphere'
 
         else:
-            self.update_table(type='biosphere')
+            self.update_table(inventory='biosphere')
             self.table.table_name = self.parent.cs_name + '_Inventory'
 
-    def update_table(self, type='biosphere'):
-        if type == 'biosphere':
+    def update_table(self, inventory='biosphere'):
+        if inventory == 'biosphere':
             if self.df_biosphere is None:
                 self.df_biosphere = self.parent.contributions.inventory_df(inventory_type='biosphere')
             self.table.sync(self.df_biosphere)
@@ -537,6 +537,9 @@ class InventoryTab(NewAnalysisTab):
             if self.df_technosphere is None:
                 self.df_technosphere = self.parent.contributions.inventory_df(inventory_type='technosphere')
             self.table.sync(self.df_technosphere)
+
+    def update_plot(self):
+        pass
 
     def clear_tables(self) -> None:
         """ Set the biosphere and technosphere to None.
@@ -557,10 +560,13 @@ class LCAResultsTab(QWidget):
 
         # buttons
         button_layout = QHBoxLayout()
+        self.button_group = QButtonGroup()
         self.button_overview = QRadioButton("Overview")
         button_layout.addWidget(self.button_overview)
         self.button_by_method = QRadioButton("by LCIA method")
         self.button_by_method.setChecked(True)
+        self.button_group.addButton(self.button_overview, 0)
+        self.button_group.addButton(self.button_by_method, 1)
         button_layout.addWidget(self.button_by_method)
         self.scenario_box = QComboBox()
         button_layout.addWidget(self.scenario_box)
@@ -571,23 +577,19 @@ class LCAResultsTab(QWidget):
         self.layout.addWidget(self.lca_overview_widget)
         self.setLayout(self.layout)
 
-        self.button_clicked()
+        self.button_clicked(False)
         self.connect_signals()
 
     def connect_signals(self):
-        self.button_overview.clicked.connect(self.button_clicked)
-        self.button_by_method.clicked.connect(self.button_clicked)
+        self.button_overview.toggled.connect(self.button_clicked)
         if self.parent:
             self.scenario_box.currentIndexChanged.connect(self.parent.update_scenario_data)
             self.parent.update_scenario_box_index.connect(self.update_scenario_box)
 
-    def button_clicked(self):
-        if self.button_overview.isChecked():
-            self.lca_overview_widget.show()
-            self.lca_scores_widget.hide()
-        else:
-            self.lca_overview_widget.hide()
-            self.lca_scores_widget.show()
+    @QtCore.Slot(bool, name="overviewToggled")
+    def button_clicked(self, is_overview: bool):
+        self.lca_overview_widget.setVisible(is_overview)
+        self.lca_scores_widget.setHidden(is_overview)
 
     def update_tab(self):
         self.lca_scores_widget.update_tab()
@@ -773,7 +775,7 @@ class ContributionTab(NewAnalysisTab):
         self.combobox_menu.agg.addItems(aggregator_list)
         self.combobox_menu.agg.blockSignals(False)
 
-    def update_analysis_tab(self):
+    def update_tab(self):
         """Override and include call to update aggregation combobox"""
         if self.combobox_menu.agg:
             self.update_aggregation_combobox()
@@ -816,6 +818,9 @@ class ContributionTab(NewAnalysisTab):
         """Updates the underlying dataframe. Implement in sublass.
         """
         raise NotImplemented
+
+    def update_table(self, *args, **kwargs):
+        super().update_table(*args, **kwargs)
 
     def update_plot(self, method=None, aggregator=None):
         if self.combobox_menu.label.text() == self.combobox_menu.method_label:
