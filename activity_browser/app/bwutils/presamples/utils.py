@@ -7,12 +7,12 @@ import pandas as pd
 
 
 def load_scenarios_from_file(path: str) -> pd.DataFrame:
-    df = pd.read_table(path)
+    df = pd.read_excel(path)
     return df
 
 
 def save_scenarios_to_file(data: pd.DataFrame, path: str) -> None:
-    data.to_csv(path_or_buf=path, sep="\t")
+    data.to_excel(excel_writer=path)
 
 
 def presamples_dir() -> Optional[Path]:
