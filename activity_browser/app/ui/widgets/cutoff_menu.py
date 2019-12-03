@@ -50,201 +50,191 @@ class CutoffMenu(QWidget):
 
     def connect_signals(self):
         # Cut-off types
-        self.cutoff_type_topx.clicked.connect(self.cutoff_type_topx_check)
-        self.cutoff_type_relative.clicked.connect(self.cutoff_type_relative_check)
+        self.buttons.relative.toggled.connect(self.cutoff_type_check)
         self.cutoff_slider_lft_btn.clicked.connect(self.cutoff_increment_left_check)
         self.cutoff_slider_rght_btn.clicked.connect(self.cutoff_increment_right_check)
 
         # Cut-off log slider
-        self.cutoff_slider_log_slider.valueChanged.connect(
+        self.sliders.relative.valueChanged.connect(
             lambda: self.cutoff_slider_relative_check("sl"))
         self.cutoff_slider_line.textChanged.connect(
             lambda: self.cutoff_slider_relative_check("le"))
         # Cut-off slider
-        self.cutoff_slider_slider.valueChanged.connect(
+        self.sliders.topx.valueChanged.connect(
             lambda: self.cutoff_slider_topx_check("sl"))
         self.cutoff_slider_line.textChanged.connect(
             lambda: self.cutoff_slider_topx_check("le"))
 
+    @property
+    def is_relative(self) -> bool:
+        return self.buttons.relative.isChecked()
+
     @Slot(name="incrementLeftCheck")
     def cutoff_increment_left_check(self):
         """ Move the slider 1 increment when left button is clicked. """
-        if self.cutoff_type_relative.isChecked():
-            num = int(self.cutoff_slider_log_slider.value())
-            self.cutoff_slider_log_slider.setValue(num + 1)
+        if self.is_relative:
+            num = int(self.sliders.relative.value())
+            self.sliders.relative.setValue(num + 1)
         else:
-            num = int(self.cutoff_slider_slider.value())
-            self.cutoff_slider_slider.setValue(num - 1)
+            num = int(self.sliders.topx.value())
+            self.sliders.topx.setValue(num - 1)
 
     @Slot(name="incrementRightCheck")
     def cutoff_increment_right_check(self):
         """ Move the slider 1 increment when right button is clicked. """
-        if self.cutoff_type_relative.isChecked():
-            num = int(self.cutoff_slider_log_slider.value())
-            self.cutoff_slider_log_slider.setValue(num - 1)
+        if self.is_relative:
+            num = int(self.sliders.relative.value())
+            self.sliders.relative.setValue(num - 1)
         else:
-            num = int(self.cutoff_slider_slider.value())
-            self.cutoff_slider_slider.setValue(num + 1)
+            num = int(self.sliders.topx.value())
+            self.sliders.topx.setValue(num + 1)
 
-    @Slot(name="relativeCheck")
-    def cutoff_type_relative_check(self):
-        """ Set cutoff to process that contribute #% or more. """
-        self.cutoff_slider_slider.setVisible(False)
-        self.cutoff_slider_log_slider.blockSignals(True)
-        self.cutoff_slider_slider.blockSignals(True)
-        self.cutoff_slider_line.blockSignals(True)
-        self.cutoff_slider_unit.setText("%  of total")
-        self.cutoff_slider_min.setText("100%")
-        self.cutoff_slider_max.setText("0.001%")
-        self.limit_type = "percent"
-        self.cutoff_slider_log_slider.blockSignals(False)
-        self.cutoff_slider_slider.blockSignals(False)
-        self.cutoff_slider_line.blockSignals(False)
-        self.cutoff_slider_log_slider.setVisible(True)
+    @Slot(bool, name="isRelativeToggled")
+    def cutoff_type_check(self, toggled: bool) -> None:
+        """ Slot connected to the relative radiobutton, the state of that
+        button determines:
+        - which sliders are visible
+        - the unit shown
+        - minimum and maximum
+        - limit_type
+        """
+        self.sliders.topx.setVisible(not toggled)
+        self.sliders.relative.setVisible(toggled)
 
-    @Slot(name="topXCheck")
-    def cutoff_type_topx_check(self):
-        """ Set cut-off to the top # of processes. """
-        self.cutoff_slider_log_slider.setVisible(False)
-        self.cutoff_slider_log_slider.blockSignals(True)
-        self.cutoff_slider_slider.blockSignals(True)
+        self.sliders.relative.blockSignals(True)
+        self.sliders.topx.blockSignals(True)
         self.cutoff_slider_line.blockSignals(True)
-        self.cutoff_slider_unit.setText(" top #")
-        self.cutoff_slider_min.setText(str(self.cutoff_slider_slider.minimum()))
-        self.cutoff_slider_max.setText(str(self.cutoff_slider_slider.maximum()))
-        self.limit_type = "number"
-        self.cutoff_slider_log_slider.blockSignals(False)
-        self.cutoff_slider_slider.blockSignals(False)
+        if toggled:
+            self.labels.unit.setText(self.units.relative)
+            self.labels.min.setText("100%")
+            self.labels.max.setText("0.001%")
+            self.limit_type = "percent"
+            self.cutoff_slider_line.setValidator(self.validators.relative)
+        else:
+            self.labels.unit.setText(self.units.topx)
+            self.labels.min.setText(str(self.sliders.topx.minimum()))
+            self.labels.max.setText(str(self.sliders.topx.maximum()))
+            self.limit_type = "number"
+            self.cutoff_slider_line.setValidator(self.validators.topx)
+        self.sliders.relative.blockSignals(False)
+        self.sliders.topx.blockSignals(False)
         self.cutoff_slider_line.blockSignals(False)
-        self.cutoff_slider_slider.setVisible(True)
 
     @Slot(str, name="sliderRelativeCheck")
     def cutoff_slider_relative_check(self, editor: str):
         """ With relative selected, change the values for plots and tables to reflect the slider/line-edit. """
-        if self.cutoff_type_relative.isChecked():
-            self.cutoff_validator = self.cutoff_validator_float
-            self.cutoff_slider_line.setValidator(self.cutoff_validator)
-            cutoff = float
+        if not self.is_relative:
+            return
+        cutoff = 0.01
 
-            # If called by slider
-            if editor == "sl":
-                self.cutoff_slider_line.blockSignals(True)
-                cutoff = abs(self.cutoff_slider_log_slider.log_value)
+        # If called by slider
+        if editor == "sl":
+            self.cutoff_slider_line.blockSignals(True)
+            cutoff = abs(self.sliders.relative.log_value)
+            self.cutoff_slider_line.setText(str(cutoff))
+            self.cutoff_slider_line.blockSignals(False)
+
+        # if called by line edit
+        elif editor == "le":
+            self.sliders.relative.blockSignals(True)
+            if self.cutoff_slider_line.text() == '-':
+                cutoff = 0.001
+                self.cutoff_slider_line.setText("0.001")
+            elif self.cutoff_slider_line.text() == '':
+                cutoff = 0.001
+            else:
+                cutoff = abs(float(self.cutoff_slider_line.text()))
+
+            if cutoff > 100:
+                cutoff = 100
                 self.cutoff_slider_line.setText(str(cutoff))
-                self.cutoff_slider_line.blockSignals(False)
+            self.sliders.relative.log_value = float(cutoff)
+            self.sliders.relative.blockSignals(False)
 
-            # if called by line edit
-            elif editor == "le":
-                self.cutoff_slider_log_slider.blockSignals(True)
-                if self.cutoff_slider_line.text() == '-':
-                    cutoff = 0.001
-                    self.cutoff_slider_line.setText("0.001")
-                elif self.cutoff_slider_line.text() == '':
-                    cutoff = 0.001
-                else:
-                    cutoff = abs(float(self.cutoff_slider_line.text()))
-
-                if cutoff > 100:
-                    cutoff = 100
-                    self.cutoff_slider_line.setText(str(cutoff))
-                self.cutoff_slider_log_slider.log_value = float(cutoff)
-                self.cutoff_slider_log_slider.blockSignals(False)
-
-            self.cutoff_value = (cutoff/100)
-            self.slider_change.emit()
+        self.cutoff_value = (cutoff/100)
+        self.slider_change.emit()
 
     @Slot(str, name="sliderTopXCheck")
     def cutoff_slider_topx_check(self, editor: str):
         """ With top # selected, change the values for plots and tables to reflect the slider/line-edit. """
-        if self.cutoff_type_topx.isChecked():
-            self.cutoff_validator = self.cutoff_validator_int
-            self.cutoff_slider_line.setValidator(self.cutoff_validator)
-            cutoff = int
+        if self.is_relative:
+            return
+        cutoff = 2
 
-            # If called by slider
-            if editor == "sl":
-                self.cutoff_slider_line.blockSignals(True)
-                cutoff = abs(int(self.cutoff_slider_slider.value()))
+        # If called by slider
+        if editor == "sl":
+            self.cutoff_slider_line.blockSignals(True)
+            cutoff = abs(int(self.sliders.topx.value()))
+            self.cutoff_slider_line.setText(str(cutoff))
+            self.cutoff_slider_line.blockSignals(False)
+
+        # if called by line edit
+        elif editor == "le":
+            self.sliders.topx.blockSignals(True)
+            if self.cutoff_slider_line.text() == '-':
+                cutoff = self.sliders.topx.minimum()
+                self.cutoff_slider_line.setText(str(self.sliders.topx.minimum()))
+            elif self.cutoff_slider_line.text() == '':
+                cutoff = self.sliders.topx.minimum()
+            else:
+                cutoff = abs(int(self.cutoff_slider_line.text()))
+
+            if cutoff > self.sliders.topx.maximum():
+                cutoff = self.sliders.topx.maximum()
                 self.cutoff_slider_line.setText(str(cutoff))
-                self.cutoff_slider_line.blockSignals(False)
+            self.sliders.topx.setValue(int(cutoff))
+            self.sliders.topx.blockSignals(False)
 
-            # if called by line edit
-            elif editor == "le":
-                self.cutoff_slider_slider.blockSignals(True)
-                if self.cutoff_slider_line.text() == '-':
-                    cutoff = self.cutoff_slider_slider.minimum()
-                    self.cutoff_slider_line.setText(str(self.cutoff_slider_slider.minimum()))
-                elif self.cutoff_slider_line.text() == '':
-                    cutoff = self.cutoff_slider_slider.minimum()
-                else:
-                    cutoff = abs(int(self.cutoff_slider_line.text()))
-
-                if cutoff > self.cutoff_slider_slider.maximum():
-                    cutoff = self.cutoff_slider_slider.maximum()
-                    self.cutoff_slider_line.setText(str(cutoff))
-                self.cutoff_slider_slider.setValue(int(cutoff))
-                self.cutoff_slider_slider.blockSignals(False)
-
-            self.cutoff_value = int(cutoff)
-            self.slider_change.emit()
+        self.cutoff_value = int(cutoff)
+        self.slider_change.emit()
 
     def make_layout(self):
-        """ Add the cut-off menu to the tab. """
+        """ Construct the layout for the cutoff menu widget.
+
+        The initial layout is set to 'relative'.
+        """
         layout = QHBoxLayout()
 
         # Cut-off types
         cutoff_type = QVBoxLayout()
         cutoff_type_label = QLabel("Cut-off type")
-        self.cutoff_type_relative = QRadioButton("Relative")
-        self.cutoff_type_relative.setChecked(True)
-        self.cutoff_type_topx = QRadioButton("Top #")
 
         # Cut-off slider
         cutoff_slider = QVBoxLayout()
         cutoff_slider_set = QVBoxLayout()
         cutoff_slider_label = QLabel("Cut-off level")
-        self.cutoff_slider_slider = QSlider(Qt.Horizontal, self)
-        self.cutoff_slider_log_slider = LogarithmicSlider(self)
-        self.cutoff_slider_log_slider.setInvertedAppearance(True)
-        self.cutoff_slider_slider.setMinimum(1)
-        self.cutoff_slider_slider.setMaximum(50)
-        self.cutoff_slider_slider.setValue(self.cutoff_value)
-        self.cutoff_slider_log_slider.log_value = self.cutoff_value
+        self.sliders.relative.setInvertedAppearance(True)
+        self.sliders.topx.setMinimum(1)
+        self.sliders.topx.setMaximum(50)
+        self.sliders.topx.setValue(self.cutoff_value)
+        self.sliders.relative.log_value = self.cutoff_value
         cutoff_slider_minmax = QHBoxLayout()
-        self.cutoff_slider_min = QLabel("100%")
-        self.cutoff_slider_max = QLabel("0.001%")
+        self.labels.min.setText("100%")
+        self.labels.max.setText("0.001%")
+        self.labels.unit.setText("%  of total")
         cutoff_slider_ledit = QHBoxLayout()
-        self.cutoff_slider_line = QLineEdit()
-        self.cutoff_validator_int = QIntValidator(self.cutoff_slider_line)
-        self.cutoff_validator_float = QDoubleValidator(self.cutoff_slider_line)
-        self.cutoff_validator = self.cutoff_validator_int
-        self.cutoff_slider_line.setValidator(self.cutoff_validator)
-
-        self.cutoff_slider_unit = QLabel("%  of total")
-
-        self.cutoff_slider_lft_btn = QPushButton("<")
+        self.cutoff_slider_line.setValidator(self.validators.relative)
         self.cutoff_slider_lft_btn.setMaximumWidth(15)
-        self.cutoff_slider_rght_btn = QPushButton(">")
         self.cutoff_slider_rght_btn.setMaximumWidth(15)
 
         # Assemble types
         cutoff_type.addWidget(cutoff_type_label)
-        cutoff_type.addWidget(self.cutoff_type_relative)
-        cutoff_type.addWidget(self.cutoff_type_topx)
+        cutoff_type.addWidget(self.buttons.relative)
+        cutoff_type.addWidget(self.buttons.topx)
 
         # Assemble slider set
+        self.sliders.topx.setVisible(False)
         cutoff_slider_set.addWidget(cutoff_slider_label)
-        cutoff_slider_set.addWidget(self.cutoff_slider_slider)
-        self.cutoff_slider_slider.setVisible(False)
-        cutoff_slider_minmax.addWidget(self.cutoff_slider_min)
-        cutoff_slider_minmax.addWidget(self.cutoff_slider_log_slider)
-        cutoff_slider_minmax.addWidget(self.cutoff_slider_max)
+        cutoff_slider_minmax.addWidget(self.labels.min)
+        cutoff_slider_minmax.addWidget(self.sliders.relative)
+        cutoff_slider_minmax.addWidget(self.sliders.topx)
+        cutoff_slider_minmax.addWidget(self.labels.max)
         cutoff_slider_set.addLayout(cutoff_slider_minmax)
 
         cutoff_slider_ledit.addWidget(self.cutoff_slider_line)
         cutoff_slider_ledit.addWidget(self.cutoff_slider_lft_btn)
         cutoff_slider_ledit.addWidget(self.cutoff_slider_rght_btn)
-        cutoff_slider_ledit.addWidget(self.cutoff_slider_unit)
+        cutoff_slider_ledit.addWidget(self.labels.unit)
         cutoff_slider_ledit.addStretch(1)
 
         cutoff_slider.addLayout(cutoff_slider_set)
