@@ -1,23 +1,50 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple
 from typing import Union
 
-from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QRadioButton, QSlider, \
-    QLabel, QLineEdit, QPushButton
+import numpy as np
+from PySide2.QtCore import QLocale, Qt, Signal, Slot
+from PySide2.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QRadioButton, QSlider, QLabel,
+    QLineEdit, QPushButton, QButtonGroup
+)
 from PySide2.QtGui import QIntValidator, QDoubleValidator
-from math import log10
 
-from activity_browser.app.ui.style import vertical_line
+from ..style import vertical_line
+
+
+Types = namedtuple("types", ("relative", "topx"))
+Labels = namedtuple("labels", ("unit", "min", "max"))
 
 
 class CutoffMenu(QWidget):
     slider_change = Signal()
 
-    def __init__(self, parent_widget, cutoff_value=0.01, limit_type="percent"):
-        super(CutoffMenu, self).__init__()
-        self.parent = parent_widget
+    def __init__(self, parent=None, cutoff_value=0.01, limit_type="percent"):
+        super().__init__(parent)
         self.cutoff_value = cutoff_value
         self.limit_type = limit_type
+
+        locale = QLocale(QLocale.English, QLocale.UnitedStates)
+        locale.setNumberOptions(QLocale.RejectGroupSeparator)
+        self.validators = Types(
+            QDoubleValidator(0.001, 100.0, 1, self), QIntValidator(0, 50, self)
+        )
+        self.validators.relative.setLocale(locale)
+        self.validators.topx.setLocale(locale)
+        self.buttons = Types(QRadioButton("Relative"), QRadioButton("Top #"))
+        self.buttons.relative.setChecked(True)
+        self.button_group = QButtonGroup()
+        self.button_group.addButton(self.buttons.relative, 0)
+        self.button_group.addButton(self.buttons.topx, 1)
+        self.sliders = Types(LogarithmicSlider(self), QSlider(Qt.Horizontal, self))
+        self.units = Types("% of total", "top #")
+        self.labels = Labels(QLabel(), QLabel(), QLabel())
+        self.cutoff_slider_line = QLineEdit()
+        self.cutoff_slider_line.setLocale(locale)
+        self.cutoff_slider_lft_btn = QPushButton("<")
+        self.cutoff_slider_rght_btn = QPushButton(">")
+
         self.make_layout()
         self.connect_signals()
 
@@ -254,26 +281,26 @@ class LogarithmicSlider(QSlider):
         1-100 to 0.001-100 logarithmically with relevant rounding.
         """
         value = float(self.value())
-        log_val = log10(value)
+        log_val = np.log10(value)
         power = log_val * 2.5 - 3
-        ret_val = 10 ** power
+        ret_val = np.power(10, power)
+        test_val = np.log10(ret_val)
 
-        if log10(ret_val) < -1:
-            ret_val = round(ret_val, 3)
-        elif log10(ret_val) < -0:
-            ret_val = round(ret_val, 2)
-        elif log10(ret_val) < 1:
-            ret_val = round(ret_val, 1)
+        if test_val < -1:
+            return ret_val.round(3)
+        elif test_val < -0:
+            return ret_val.round(2)
+        elif test_val < 1:
+            return ret_val.round(1)
         else:
-            ret_val = int(round(ret_val, 0))
-        return ret_val
+            return ret_val.astype(int)
 
     @log_value.setter
     def log_value(self, value: float) -> None:
         """ Modify value from 0.001-100 to 1-100 logarithmically and set
         slider to value.
         """
-        value = int(float(value) * (10 ** 3))
-        log_val = round(log10(value), 3)
+        value = int(float(value) * np.power(10, 3))
+        log_val = np.log10(value).round(3)
         set_val = log_val * 20
         self.setValue(set_val)
