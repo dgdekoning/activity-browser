@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Union
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QRadioButton, QSlider, \
     QLabel, QLineEdit, QPushButton
 from PySide2.QtGui import QIntValidator, QDoubleValidator
@@ -9,7 +9,10 @@ from math import log10
 
 from activity_browser.app.ui.style import vertical_line
 
+
 class CutoffMenu(QWidget):
+    slider_change = Signal()
+
     def __init__(self, parent_widget, cutoff_value=0.01, limit_type="percent"):
         super(CutoffMenu, self).__init__()
         self.parent = parent_widget
@@ -45,6 +48,7 @@ class CutoffMenu(QWidget):
         if self.parent.table:
             self.parent.update_table()
 
+    @Slot(name="incrementLeftCheck")
     def cutoff_increment_left_check(self):
         """ Move the slider 1 increment when left button is clicked. """
         if self.cutoff_type_relative.isChecked():
@@ -54,6 +58,7 @@ class CutoffMenu(QWidget):
             num = int(self.cutoff_slider_slider.value())
             self.cutoff_slider_slider.setValue(num - 1)
 
+    @Slot(name="incrementRightCheck")
     def cutoff_increment_right_check(self):
         """ Move the slider 1 increment when right button is clicked. """
         if self.cutoff_type_relative.isChecked():
@@ -63,6 +68,7 @@ class CutoffMenu(QWidget):
             num = int(self.cutoff_slider_slider.value())
             self.cutoff_slider_slider.setValue(num + 1)
 
+    @Slot(name="relativeCheck")
     def cutoff_type_relative_check(self):
         """ Set cutoff to process that contribute #% or more. """
         self.cutoff_slider_slider.setVisible(False)
@@ -78,6 +84,7 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_line.blockSignals(False)
         self.cutoff_slider_log_slider.setVisible(True)
 
+    @Slot(name="topXCheck")
     def cutoff_type_topx_check(self):
         """ Set cut-off to the top # of processes. """
         self.cutoff_slider_log_slider.setVisible(False)
@@ -93,7 +100,8 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_line.blockSignals(False)
         self.cutoff_slider_slider.setVisible(True)
 
-    def cutoff_slider_relative_check(self, editor):
+    @Slot(str, name="sliderRelativeCheck")
+    def cutoff_slider_relative_check(self, editor: str):
         """ With relative selected, change the values for plots and tables to reflect the slider/line-edit. """
         if self.cutoff_type_relative.isChecked():
             self.cutoff_validator = self.cutoff_validator_float
@@ -127,7 +135,8 @@ class CutoffMenu(QWidget):
             self.cutoff_value = (cutoff/100)
             self.update_plot_table()
 
-    def cutoff_slider_topx_check(self, editor):
+    @Slot(str, name="sliderTopXCheck")
+    def cutoff_slider_topx_check(self, editor: str):
         """ With top # selected, change the values for plots and tables to reflect the slider/line-edit. """
         if self.cutoff_type_topx.isChecked():
             self.cutoff_validator = self.cutoff_validator_int
@@ -176,7 +185,7 @@ class CutoffMenu(QWidget):
         self.cutoff_slider = QVBoxLayout()
         self.cutoff_slider_set = QVBoxLayout()
         self.cutoff_slider_label = QLabel("Cut-off level")
-        self.cutoff_slider_slider = QSlider(Qt.Horizontal)
+        self.cutoff_slider_slider = QSlider(Qt.Horizontal, self)
         self.cutoff_slider_log_slider = LogarithmicSlider(self)
         self.cutoff_slider_log_slider.setInvertedAppearance(True)
         self.cutoff_slider_slider.setMinimum(1)
