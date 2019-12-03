@@ -7,8 +7,7 @@ from PySide2.QtWidgets import QComboBox
 
 from ...bwutils import presamples as ps_utils
 from ...signals import signals
-from .delegates import FloatDelegate, ViewOnlyDelegate
-from .views import ABDataFrameEdit, dataframe_sync
+from .views import ABDataFrameSimpleCopy, dataframe_sync
 
 
 class PresamplesList(QComboBox):
@@ -50,7 +49,7 @@ class PresamplesList(QComboBox):
         return ps_utils.find_all_package_names()
 
 
-class ScenarioTable(ABDataFrameEdit):
+class ScenarioTable(ABDataFrameSimpleCopy):
     """ Constructs an infinitely (horizontally) expandable table that is
     used to set specific amount for user-defined parameters.
 
@@ -61,8 +60,6 @@ class ScenarioTable(ABDataFrameEdit):
     """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setItemDelegate(FloatDelegate(self))
-        self.setItemDelegateForColumn(0, ViewOnlyDelegate(self))
 
     @dataframe_sync
     def sync(self, df: pd.DataFrame = None) -> None:
