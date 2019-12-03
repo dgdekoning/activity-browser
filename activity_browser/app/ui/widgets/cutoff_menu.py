@@ -133,7 +133,7 @@ class CutoffMenu(QWidget):
                 self.cutoff_slider_log_slider.blockSignals(False)
 
             self.cutoff_value = (cutoff/100)
-            self.update_plot_table()
+            self.slider_change.emit()
 
     @Slot(str, name="sliderTopXCheck")
     def cutoff_slider_topx_check(self, editor: str):
@@ -168,7 +168,7 @@ class CutoffMenu(QWidget):
                 self.cutoff_slider_slider.blockSignals(False)
 
             self.cutoff_value = int(cutoff)
-            self.update_plot_table()
+            self.slider_change.emit()
 
     def make_layout(self):
         """ Add the cut-off menu to the tab. """
