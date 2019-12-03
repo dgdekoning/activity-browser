@@ -5,13 +5,11 @@ import brightway2 as bw
 from bw2data.filesystem import safe_filename
 from PySide2.QtCore import Slot, QSize
 from PySide2.QtWidgets import (
-    QCheckBox, QFileDialog, QInputDialog, QHBoxLayout, QMessageBox, QPushButton, QToolBar,
+    QCheckBox, QFileDialog, QHBoxLayout, QMessageBox, QPushButton, QToolBar,
     QStyle, QVBoxLayout, QTabWidget
 )
 
-from ...bwutils.presamples import (
-    PresamplesParameterManager, load_scenarios_from_file, save_scenarios_to_file
-)
+from ...bwutils import presamples as ps_utils
 from ...settings import project_settings
 from ...signals import signals
 from ..icons import qicons
@@ -20,6 +18,7 @@ from ..tables import (
     ActivityParameterTable, DataBaseParameterTable, ExchangesTable,
     ProjectParameterTable, ScenarioTable
 )
+from ..widgets import ForceInputDialog
 from .base import BaseRightTab
 
 
@@ -323,7 +322,7 @@ class PresamplesTab(BaseRightTab):
             dir=project_settings.data_dir, filter=self.tbl.EXCEL_FILTER
         )
         if path:
-            df = load_scenarios_from_file(path)
+            df = ps_utils.load_scenarios_from_file(path)
             self.tbl.sync(df=df)
 
     @Slot(name="saveScenarioTable")
@@ -333,29 +332,38 @@ class PresamplesTab(BaseRightTab):
             dir=project_settings.data_dir, filter=self.tbl.EXCEL_FILTER
         )
         if filename:
-            save_scenarios_to_file(self.tbl.dataframe, filename)
+            ps_utils.save_scenarios_to_file(self.tbl.dataframe, filename)
 
     @Slot(name="createPresamplesPackage")
     def calculate_scenarios(self):
-        if not PresamplesParameterManager.can_build_presamples():
+        if not ps_utils.PresamplesParameterManager.can_build_presamples():
             QMessageBox.warning(
-                self, "No parameterized exchanges", "Please set formulas on"
-                                                    " exchanges to make use of scenario analysis.",
+                self, "No parameterized exchanges",
+                "Please set formulas on exchanges to make use of scenario analysis.",
                 QMessageBox.Ok, QMessageBox.Ok
             )
             return
-        pkg_label, ok = QInputDialog().getText(
-            self, "Add label to calculated scenarios",
-            "Optionally add a label to the calculated scenarios",
+        dialog = ForceInputDialog.get_text(
+            self, "Add label", "Add a label to the calculated scenarios"
         )
-        if ok:
-            pkg_label = pkg_label or uuid.uuid4().hex
-            self.build_presamples_packages(safe_filename(pkg_label, False))
+        if dialog.exec_() == ForceInputDialog.Accepted:
+            result = dialog.output
+            if result in ps_utils.find_all_package_names():
+                overwrite = QMessageBox.question(
+                    self, "Label already in use", "Overwrite the old calculations?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if overwrite == QMessageBox.Yes:
+                    older = ps_utils.get_package_path(result)
+                    ps_utils.remove_package(older)
+                    self.build_presamples_packages(safe_filename(result, False))
+            else:
+                self.build_presamples_packages(safe_filename(result, False))
 
     def build_presamples_packages(self, name: str):
         """ Calculate and store presamples arrays from parameter scenarios.
         """
-        ppm = PresamplesParameterManager.construct()
+        ppm = ps_utils.PresamplesParameterManager.construct()
         names, data = zip(*self.tbl.iterate_scenarios())
         ps_id, path = ppm.presamples_from_scenarios(name, zip(names, data))
         description = "{}".format(tuple(names))
