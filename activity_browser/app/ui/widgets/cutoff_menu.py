@@ -39,15 +39,6 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_line.textChanged.connect(
             lambda: self.cutoff_slider_topx_check("le"))
 
-    def update_plot_table(self):
-        """Updates tables and plots in parent widget.
-        Could also be implemented with signals/slots and
-        a check for the specific parent (e.g. isinstance(receiver, self.parent))"""
-        if self.parent.plot:
-            self.parent.update_plot()
-        if self.parent.table:
-            self.parent.update_table()
-
     @Slot(name="incrementLeftCheck")
     def cutoff_increment_left_check(self):
         """ Move the slider 1 increment when left button is clicked. """
@@ -172,19 +163,19 @@ class CutoffMenu(QWidget):
 
     def make_layout(self):
         """ Add the cut-off menu to the tab. """
-        self.cutoff_menu = QHBoxLayout()
+        layout = QHBoxLayout()
 
         # Cut-off types
-        self.cutoff_type = QVBoxLayout()
-        self.cutoff_type_label = QLabel("Cut-off type")
+        cutoff_type = QVBoxLayout()
+        cutoff_type_label = QLabel("Cut-off type")
         self.cutoff_type_relative = QRadioButton("Relative")
         self.cutoff_type_relative.setChecked(True)
         self.cutoff_type_topx = QRadioButton("Top #")
 
         # Cut-off slider
-        self.cutoff_slider = QVBoxLayout()
-        self.cutoff_slider_set = QVBoxLayout()
-        self.cutoff_slider_label = QLabel("Cut-off level")
+        cutoff_slider = QVBoxLayout()
+        cutoff_slider_set = QVBoxLayout()
+        cutoff_slider_label = QLabel("Cut-off level")
         self.cutoff_slider_slider = QSlider(Qt.Horizontal, self)
         self.cutoff_slider_log_slider = LogarithmicSlider(self)
         self.cutoff_slider_log_slider.setInvertedAppearance(True)
@@ -192,10 +183,10 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_slider.setMaximum(50)
         self.cutoff_slider_slider.setValue(self.cutoff_value)
         self.cutoff_slider_log_slider.log_value = self.cutoff_value
-        self.cutoff_slider_minmax = QHBoxLayout()
+        cutoff_slider_minmax = QHBoxLayout()
         self.cutoff_slider_min = QLabel("100%")
         self.cutoff_slider_max = QLabel("0.001%")
-        self.cutoff_slider_ledit = QHBoxLayout()
+        cutoff_slider_ledit = QHBoxLayout()
         self.cutoff_slider_line = QLineEdit()
         self.cutoff_validator_int = QIntValidator(self.cutoff_slider_line)
         self.cutoff_validator_float = QDoubleValidator(self.cutoff_slider_line)
@@ -210,35 +201,35 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_rght_btn.setMaximumWidth(15)
 
         # Assemble types
-        self.cutoff_type.addWidget(self.cutoff_type_label)
-        self.cutoff_type.addWidget(self.cutoff_type_relative)
-        self.cutoff_type.addWidget(self.cutoff_type_topx)
+        cutoff_type.addWidget(cutoff_type_label)
+        cutoff_type.addWidget(self.cutoff_type_relative)
+        cutoff_type.addWidget(self.cutoff_type_topx)
 
         # Assemble slider set
-        self.cutoff_slider_set.addWidget(self.cutoff_slider_label)
-        self.cutoff_slider_set.addWidget(self.cutoff_slider_slider)
+        cutoff_slider_set.addWidget(cutoff_slider_label)
+        cutoff_slider_set.addWidget(self.cutoff_slider_slider)
         self.cutoff_slider_slider.setVisible(False)
-        self.cutoff_slider_minmax.addWidget(self.cutoff_slider_min)
-        self.cutoff_slider_minmax.addWidget(self.cutoff_slider_log_slider)
-        self.cutoff_slider_minmax.addWidget(self.cutoff_slider_max)
-        self.cutoff_slider_set.addLayout(self.cutoff_slider_minmax)
+        cutoff_slider_minmax.addWidget(self.cutoff_slider_min)
+        cutoff_slider_minmax.addWidget(self.cutoff_slider_log_slider)
+        cutoff_slider_minmax.addWidget(self.cutoff_slider_max)
+        cutoff_slider_set.addLayout(cutoff_slider_minmax)
 
-        self.cutoff_slider_ledit.addWidget(self.cutoff_slider_line)
-        self.cutoff_slider_ledit.addWidget(self.cutoff_slider_lft_btn)
-        self.cutoff_slider_ledit.addWidget(self.cutoff_slider_rght_btn)
-        self.cutoff_slider_ledit.addWidget(self.cutoff_slider_unit)
-        self.cutoff_slider_ledit.addStretch(1)
+        cutoff_slider_ledit.addWidget(self.cutoff_slider_line)
+        cutoff_slider_ledit.addWidget(self.cutoff_slider_lft_btn)
+        cutoff_slider_ledit.addWidget(self.cutoff_slider_rght_btn)
+        cutoff_slider_ledit.addWidget(self.cutoff_slider_unit)
+        cutoff_slider_ledit.addStretch(1)
 
-        self.cutoff_slider.addLayout(self.cutoff_slider_set)
-        self.cutoff_slider.addLayout(self.cutoff_slider_ledit)
+        cutoff_slider.addLayout(cutoff_slider_set)
+        cutoff_slider.addLayout(cutoff_slider_ledit)
 
         # Assemble cut-off menu
-        self.cutoff_menu.addLayout(self.cutoff_type)
-        self.cutoff_menu.addWidget(vertical_line())
-        self.cutoff_menu.addLayout(self.cutoff_slider)
-        self.cutoff_menu.addStretch()
+        layout.addLayout(cutoff_type)
+        layout.addWidget(vertical_line())
+        layout.addLayout(cutoff_slider)
+        layout.addStretch()
 
-        self.setLayout(self.cutoff_menu)
+        self.setLayout(layout)
 
 
 # Logarithmic math refresher:
