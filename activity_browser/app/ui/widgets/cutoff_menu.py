@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from typing import Union
+
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QRadioButton, QSlider, \
     QLabel, QLineEdit, QPushButton
@@ -101,7 +103,7 @@ class CutoffMenu(QWidget):
             # If called by slider
             if editor == "sl":
                 self.cutoff_slider_line.blockSignals(True)
-                cutoff = abs(self.cutoff_slider_log_slider.logValue())
+                cutoff = abs(self.cutoff_slider_log_slider.log_value)
                 self.cutoff_slider_line.setText(str(cutoff))
                 self.cutoff_slider_line.blockSignals(False)
 
@@ -119,7 +121,7 @@ class CutoffMenu(QWidget):
                 if cutoff > 100:
                     cutoff = 100
                     self.cutoff_slider_line.setText(str(cutoff))
-                self.cutoff_slider_log_slider.setLogValue(float(cutoff))
+                self.cutoff_slider_log_slider.log_value = float(cutoff)
                 self.cutoff_slider_log_slider.blockSignals(False)
 
             self.cutoff_value = (cutoff/100)
@@ -180,7 +182,7 @@ class CutoffMenu(QWidget):
         self.cutoff_slider_slider.setMinimum(1)
         self.cutoff_slider_slider.setMaximum(50)
         self.cutoff_slider_slider.setValue(self.cutoff_value)
-        self.cutoff_slider_log_slider.setLogValue(self.cutoff_value)
+        self.cutoff_slider_log_slider.log_value = self.cutoff_value
         self.cutoff_slider_minmax = QHBoxLayout()
         self.cutoff_slider_min = QLabel("100%")
         self.cutoff_slider_max = QLabel("0.001%")
@@ -238,33 +240,23 @@ class CutoffMenu(QWidget):
 class LogarithmicSlider(QSlider):
     """ Makes a QSlider object that behaves logarithmically.
 
-    This slider adds two functions, setLogValue and Logvalue, named after the setValue and Value functions
-    of a QSlider.
+    This class uses the property `log_value` getter and setter to modify
+    the QSlider through the `value` and `setValue` methods.
     """
-
-    def __init__(self, parent):
-        super(LogarithmicSlider, self).__init__(parent)
-
-        self.setOrientation(Qt.Horizontal)
-
+    def __init__(self, parent=None):
+        super().__init__(Qt.Horizontal, parent)
         self.setMinimum(1)
         self.setMaximum(100)
 
-    def setLogValue(self, value):
-        """ Modify value from 0.001-100 to 1-100 logarithmically and set slider to value. """
-        value = int(float(value)*(10**3))
-        log_val = round(log10(value), 3)
-        set_val = log_val*20
-        self.setValue(set_val)
-
-    def logValue(self, value=None):
-        """ Read (slider) value and modify it from 1-100 to 0.001-100 logarithmically with relevant rounding. """
-        if value == None:
-            value = self.value()
-        value = float(value)
+    @property
+    def log_value(self) -> Union[int, float]:
+        """ Read (slider) value and modify it from
+        1-100 to 0.001-100 logarithmically with relevant rounding.
+        """
+        value = float(self.value())
         log_val = log10(value)
         power = log_val * 2.5 - 3
-        ret_val = 10**power
+        ret_val = 10 ** power
 
         if log10(ret_val) < -1:
             ret_val = round(ret_val, 3)
@@ -275,3 +267,13 @@ class LogarithmicSlider(QSlider):
         else:
             ret_val = int(round(ret_val, 0))
         return ret_val
+
+    @log_value.setter
+    def log_value(self, value: float) -> None:
+        """ Modify value from 0.001-100 to 1-100 logarithmically and set
+        slider to value.
+        """
+        value = int(float(value) * (10 ** 3))
+        log_val = round(log10(value), 3)
+        set_val = log_val * 20
+        self.setValue(set_val)
