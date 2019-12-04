@@ -234,6 +234,7 @@ class ProjectParameterTable(BaseParameterTable):
 
     def rename_parameter(self, proxy, new_name: str, update: bool = True) -> None:
         parameter = self.get_parameter(proxy)
+        signals.parameter_renamed.emit(parameter.name, "project", new_name)
         bw.parameters.rename_project_parameter(parameter, new_name, update)
 
     def uncertainty_columns(self, show: bool):
@@ -302,6 +303,7 @@ class DataBaseParameterTable(BaseParameterTable):
 
     def rename_parameter(self, proxy, new_name: str, update: bool = True) -> None:
         parameter = self.get_parameter(proxy)
+        signals.parameter_renamed.emit(parameter.name, parameter.database, new_name)
         bw.parameters.rename_database_parameter(parameter, new_name, update)
 
     def uncertainty_columns(self, show: bool):
@@ -475,6 +477,7 @@ class ActivityParameterTable(BaseParameterTable):
 
     def rename_parameter(self, proxy, new_name: str, update: bool = True) -> None:
         parameter = self.get_parameter(proxy)
+        signals.parameter_renamed.emit(parameter.name, parameter.group, new_name)
         bw.parameters.rename_activity_parameter(parameter, new_name, update)
 
     def contextMenuEvent(self, event: QContextMenuEvent):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Iterable, List, Tuple
 
+import numpy as np
 import pandas as pd
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QComboBox
@@ -81,6 +82,16 @@ class ScenarioTable(ABDataFrameSimpleCopy):
     @Slot(bool, name="showGroupColumn")
     def group_column(self, shown: bool = False) -> None:
         self.setColumnHidden(0, not shown)
+
+    @Slot(str, str, str, name="renameParameterIndex")
+    def update_param_name(self, old: str, group: str, new: str) -> None:
+        """ Kind of a cheat, but directly edit the dataframe.index to update
+        the table whenever the user renames a parameter.
+        """
+        self.dataframe.index = pd.Index(np.where(
+            (self.dataframe.index == old) & (self.dataframe["Group"] == group),
+            new, self.dataframe.index
+        ), name=self.dataframe.index.name)
 
     def get_scenario_columns(self) -> Iterable[str]:
         return self.dataframe.columns[1:]
