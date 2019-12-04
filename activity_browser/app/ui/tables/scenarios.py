@@ -60,24 +60,61 @@ class ScenarioTable(ABDataFrameSimpleCopy):
 
     """
     HEADERS = ["Name", "Group", "default"]
+    MATCH_COLS = ["Name", "Group"]
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
     @dataframe_sync
     def sync(self, df: pd.DataFrame = None) -> None:
+        """ Construct the dataframe from the existing parameters, if ``df``
+        is given, perform a merge to possibly include additional columns.
+        """
+        data = ps_utils.process_brightway_parameters()
+        self.dataframe = pd.DataFrame(data, columns=self.HEADERS)
         if df is not None:
-            required = {"Name", "Group"}
+            required = set(self.MATCH_COLS)
             if not required.issubset(df.columns):
                 raise ValueError(
                     "The given dataframe does not contain required columns: {}".format(required.difference(df.columns))
                 )
             assert df.columns.get_loc("Group") == 1
-            self.dataframe = df.set_index("Name")
-            return
-        data = ps_utils.process_brightway_parameters()
-        self.dataframe = pd.DataFrame(data, columns=self.HEADERS)
+            if "default" in df.columns:
+                df.drop(columns="default", inplace=True)
+            self.dataframe = self._perform_merge(self.dataframe, df)
         self.dataframe.set_index("Name", inplace=True)
+
+    @classmethod
+    def _perform_merge(cls, left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
+        """ There are three kinds of actions that can occur: adding new columns,
+        updating values in matching columns, and a combination of the two.
+
+        ``left`` dataframe always determines the row-size of the resulting
+        dataframe.
+        Any `NaN` values in the new columns in ``right`` will be replaced
+        with values from the `default` column from ``left``.
+        """
+        right_columns = right.drop(columns=cls.MATCH_COLS).columns
+        matching = right_columns.intersection(left.columns)
+        if not matching.empty:
+            # Replace values and drop the matching columns
+            left[matching] = right[matching]
+            right.drop(columns=matching, inplace=True)
+            if right.drop(columns=cls.MATCH_COLS).columns.any():
+                # Merge the remaining columns
+                df = left.merge(right, how="left", on=cls.MATCH_COLS)
+            else:
+                df = left
+        else:
+            df = left.merge(right, how="left", on=cls.MATCH_COLS)
+        # Now go over the non-standard columns and see if there are any
+        # missing values.
+        new_cols = df.drop(columns=cls.HEADERS).columns
+        missing = new_cols[df[new_cols].isna().any()]
+        if not missing.empty:
+            idx = missing.append(pd.Index(["default"]))
+            df[idx] = df[idx].apply(lambda x: x.fillna(x["default"]), axis=1)
+        return df
 
     @Slot(bool, name="showGroupColumn")
     def group_column(self, shown: bool = False) -> None:
