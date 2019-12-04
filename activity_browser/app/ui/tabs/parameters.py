@@ -295,6 +295,7 @@ class PresamplesTab(BaseRightTab):
         self.hide_group.toggled.connect(self.tbl.group_column)
         self.refresh_btn.clicked.connect(self.tbl.sync)
         signals.project_selected.connect(self.build_tables)
+        signals.parameters_changed.connect(self.tbl.rebuild_table)
         signals.parameter_renamed.connect(self.tbl.update_param_name)
 
     def _construct_layout(self):

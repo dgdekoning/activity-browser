@@ -166,7 +166,7 @@ class BaseParameterTable(ABDataFrameEdit):
         param = self.get_parameter(proxy)
         with bw.parameters.db.atomic():
             param.delete_instance()
-        self.sync(self.build_df())
+        signals.parameters_changed.emit()
 
     def uncertainty_columns(self, show: bool):
         """ Given a boolean, iterates over the uncertainty columns and either

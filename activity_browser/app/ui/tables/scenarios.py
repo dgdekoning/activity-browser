@@ -116,6 +116,17 @@ class ScenarioTable(ABDataFrameSimpleCopy):
             df[idx] = df[idx].apply(lambda x: x.fillna(x["default"]), axis=1)
         return df
 
+    @Slot(name="safeTableRebuild")
+    def rebuild_table(self) -> None:
+        """ Should be called when the `parameters_changed` signal is emitted.
+        Will call sync with a copy of the current dataframe to ensure no
+        user-imported data is lost.
+
+        TODO: handle database parameter group changes correctly. Maybe a
+         separate signal like rename?
+        """
+        self.sync(self.dataframe.reset_index())
+
     @Slot(bool, name="showGroupColumn")
     def group_column(self, shown: bool = False) -> None:
         self.setColumnHidden(0, not shown)
