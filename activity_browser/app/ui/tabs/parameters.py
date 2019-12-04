@@ -277,6 +277,7 @@ class PresamplesTab(BaseRightTab):
         self.calculate_btn = QPushButton(
             qicons.calculate, "Process scenario table for LCA calculations"
         )
+        self.hide_group = QCheckBox("Show group column")
         self.refresh_btn = QPushButton(
             self.style().standardIcon(QStyle.SP_BrowserReload),
             "Clear table and reload parameters"
@@ -291,6 +292,7 @@ class PresamplesTab(BaseRightTab):
         self.load_btn.clicked.connect(self.select_read_file)
         self.save_btn.clicked.connect(self.save_scenarios)
         self.calculate_btn.clicked.connect(self.calculate_scenarios)
+        self.hide_group.toggled.connect(self.tbl.group_column)
         self.refresh_btn.clicked.connect(self.tbl.sync)
         signals.project_selected.connect(self.build_tables)
 
@@ -303,8 +305,8 @@ class PresamplesTab(BaseRightTab):
         row = QHBoxLayout()
         row.addWidget(self.load_btn)
         row.addWidget(self.save_btn)
-        row.addStretch(1)
         row.addWidget(self.calculate_btn)
+        row.addWidget(self.hide_group)
         row.addStretch(1)
         row.addWidget(self.refresh_btn)
         layout.addLayout(row)
@@ -314,6 +316,7 @@ class PresamplesTab(BaseRightTab):
 
     def build_tables(self) -> None:
         self.tbl.sync()
+        self.tbl.group_column(False)
 
     @Slot(name="loadSenarioTable")
     def select_read_file(self):

@@ -58,6 +58,8 @@ class ScenarioTable(ABDataFrameSimpleCopy):
     where N is the number of rows found in the Name column.
 
     """
+    HEADERS = ["Name", "Group", "default"]
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -73,8 +75,12 @@ class ScenarioTable(ABDataFrameSimpleCopy):
             self.dataframe = df.set_index("Name")
             return
         data = ps_utils.process_brightway_parameters()
-        self.dataframe = pd.DataFrame(data, columns=["Name", "Group", "default"])
+        self.dataframe = pd.DataFrame(data, columns=self.HEADERS)
         self.dataframe.set_index("Name", inplace=True)
+
+    @Slot(bool, name="showGroupColumn")
+    def group_column(self, shown: bool = False) -> None:
+        self.setColumnHidden(0, not shown)
 
     def get_scenario_columns(self) -> Iterable[str]:
         return self.dataframe.columns[1:]
