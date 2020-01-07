@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import brightway2 as bw
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QInputDialog, QMessageBox
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QWidget
 
 from ..ui.widgets import CopyDatabaseDialog
 from ..ui.wizards.db_import_wizard import DatabaseImportWizard, DefaultBiosphereDialog
@@ -16,7 +16,8 @@ class DatabaseController(BaseController):
         super().__init__(parent)
         self.biosphere_importer = None
         self.copy_progress = None
-        self.db_wizard = None
+        # Create widget for temporary wizard to attach to
+        self.db_wizard = QWidget(parent)
 
     def connect_signals(self):
         signals.add_database.connect(self.add_database)
@@ -76,19 +77,9 @@ class DatabaseController(BaseController):
             del bw.databases[name]
             ProjectController.change_project(bw.projects.current, reload=True)
 
-    def _clear_database_wizard(self) -> None:
-        """ Separate cleanup method, used to clear out existing import wizard
-        when switching projects.
-        """
-        if self.db_wizard is None:
-            return
-        self.db_wizard.deleteLater()
-        self.db_wizard = None
-
     @Slot(name="importDatabaseWizard")
     def import_database_wizard(self) -> None:
         """ Create a database import wizard, if it already exists, set the
         previous one to delete and recreate it.
         """
-        self._clear_database_wizard()
-        self.db_wizard = DatabaseImportWizard()
+        _ = DatabaseImportWizard(self.db_wizard)

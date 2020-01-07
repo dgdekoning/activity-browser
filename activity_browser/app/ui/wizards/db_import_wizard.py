@@ -56,18 +56,13 @@ class DatabaseImportWizard(QtWidgets.QWizard):
         self.setPage(self.CONFIRM, self.confirmation_page)
         self.setPage(self.IMPORT, self.import_page)
         self.setStartId(self.IMPORT_TYPE)
-        self.show()
-
-        # with this line, finish behaves like cancel and the wizard can be reused
-        # db import is done when finish button becomes active
-        self.button(QtWidgets.QWizard.FinishButton).clicked.connect(self.cleanup)
-
-        # thread management
-        self.button(QtWidgets.QWizard.CancelButton).clicked.connect(self.cancel_thread)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        # Clean up threads on cancellation
         self.button(QtWidgets.QWizard.CancelButton).clicked.connect(self.cancel_extraction)
-
+        self.button(QtWidgets.QWizard.CancelButton).clicked.connect(self.cancel_thread)
         import_signals.connection_problem.connect(self.show_info)
         import_signals.import_failure.connect(self.show_info)
+        self.show()
 
     @property
     def version(self):
@@ -86,24 +81,20 @@ class DatabaseImportWizard(QtWidgets.QWizard):
 
         This allows the import wizard to be reused, ie starts from the beginning
         """
-        self.cancel_thread()
-        self.cancel_extraction()
         event.accept()
+        self.cancel_extraction()
+        self.cancel_thread()
 
     def cancel_thread(self):
         print('\nDatabase import interrupted!')
         import_signals.cancel_sentinel = True
-        self.cleanup()
+        self.reject()
 
     def cancel_extraction(self):
         process = getattr(self.downloader, "extraction_process", None)
         if process is not None:
             process.kill()
             process.communicate()
-
-    def cleanup(self):
-        self.reject()
-        self.import_page.complete = False
 
     def show_info(self, info):
         title, message = info
