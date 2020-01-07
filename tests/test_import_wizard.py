@@ -12,6 +12,6 @@ def test_open_db_wizard(qtbot, ab_app):
         QtCore.Qt.LeftButton
     )
     qtbot.mouseClick(
-        ab_app.controller.db_wizard.button(QtWidgets.QWizard.CancelButton),
+        ab_app.controllers.database.db_wizard.button(QtWidgets.QWizard.CancelButton),
         QtCore.Qt.LeftButton
     )

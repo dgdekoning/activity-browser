@@ -2,7 +2,7 @@
 import brightway2 as bw
 from PySide2 import QtCore
 
-from activity_browser.app.controller import Controller
+from activity_browser.app.controllers import ProjectController
 from activity_browser.app.signals import signals
 from activity_browser.app.ui.wizards.db_import_wizard import import_signals
 
@@ -10,12 +10,13 @@ from activity_browser.app.ui.wizards.db_import_wizard import import_signals
 def test_add_default_data(qtbot, mocker, ab_app):
     assert bw.projects.current == 'default'
     qtbot.waitForWindowShown(ab_app.main_window)
-    mocker.patch.object(Controller, 'get_new_project_name_dialog', return_value='pytest_project')
+    mocker.patch.object(ProjectController, '_ask_for_project_name', return_value='pytest_project')
     project_tab = ab_app.main_window.left_panel.tabs['Project']
-    qtbot.mouseClick(
-        project_tab.projects_widget.new_project_button,
-        QtCore.Qt.LeftButton
-    )
+    with qtbot.waitSignal(signals.projects_changed, timeout=500):
+        qtbot.mouseClick(
+            project_tab.projects_widget.new_project_button,
+            QtCore.Qt.LeftButton
+        )
     assert bw.projects.current == 'pytest_project'
 
     with qtbot.waitSignal(import_signals.biosphere_finished, timeout=600000):
