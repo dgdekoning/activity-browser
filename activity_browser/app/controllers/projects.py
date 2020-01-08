@@ -37,8 +37,6 @@ class ProjectController(BaseController):
     @staticmethod
     @Slot(str, name="changeBrightwayProject")
     def change_project(name: str = None, reload: bool = False) -> None:
-        # TODO: what should happen if a new project is opened? (all activities, etc. closed?)
-        # self.clear_database_wizard()
         if not name:
             print("No project name given.")
             return
