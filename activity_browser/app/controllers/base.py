@@ -8,4 +8,4 @@ class BaseController(QObject):
         self.connect_signals()
 
     def connect_signals(self):
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
