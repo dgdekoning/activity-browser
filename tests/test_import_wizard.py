@@ -8,13 +8,13 @@ def test_open_db_wizard(qtbot, ab_app):
     qtbot.waitForWindowShown(ab_app.main_window)
     project_tab = ab_app.main_window.left_panel.tabs['Project']
 
-    def handle_message():
-        box = QtWidgets.QApplication.activeWindow()
-        btn = box.button(QtWidgets.QWizard.CancelButton)
-        qtbot.mouseClick(btn, QtCore.Qt.LeftButton, delay=1)
-
-    QtCore.QTimer.singleShot(100, handle_message)
     qtbot.mouseClick(
         project_tab.databases_widget.import_database_button,
         QtCore.Qt.LeftButton
+    )
+    # The wizard should now be initialized and hooked to the QWidget.
+    wizard = ab_app.controllers.database.db_wizard.findChild(QtWidgets.QWizard)
+    qtbot.mouseClick(
+        wizard.button(QtWidgets.QWizard.CancelButton),
+        QtCore.Qt.LeftButton, delay=1
     )
