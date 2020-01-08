@@ -308,13 +308,10 @@ def test_open_activity_tab(qtbot, ab_app):
     rect = table.visualRect(table.proxy_model.index(0, 3))
     qtbot.mouseClick(table.viewport(), QtCore.Qt.LeftButton, pos=rect.center())
 
-    parameter_index = panel.currentIndex()
-
+    assert panel.currentIndex() == panel.indexOf(param_tab)
     # Trigger the tab to open
     table.open_activity_tab()
-
     # We should now be looking at the activity tab
-    assert panel.currentIndex() != parameter_index
     assert panel.currentIndex() == panel.indexOf(activities_tab)
 
 
