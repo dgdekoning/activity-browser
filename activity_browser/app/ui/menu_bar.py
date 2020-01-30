@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
-
 import brightway2 as bw
 from PySide2 import QtCore, QtWidgets, QtGui
 
@@ -11,8 +9,9 @@ from .wizards.settings_wizard import SettingsWizard
 from .wizards.db_export_wizard import DatabaseExportWizard
 
 
-class MenuBar(object):
+class MenuBar(QtWidgets.QMenuBar):
     def __init__(self, window):
+        super().__init__(window)
         self.window = window
         self.update_biosphere_action = QtWidgets.QAction(
             window.style().standardIcon(QtWidgets.QStyle.SP_BrowserReload),
@@ -23,14 +22,12 @@ class MenuBar(object):
             qicons.import_db, '&Import database...', None
         )
 
-        self.menubar = QtWidgets.QMenuBar()
-        self.menubar.addMenu(self.setup_file_menu())
-        # self.menubar.addMenu(self.setup_tools_menu())
-        # self.menubar.addMenu(self.setup_extensions_menu())
-        self.menubar.addMenu(self.setup_view_menu())
-        self.menubar.addMenu(self.setup_windows_menu())
-        self.menubar.addMenu(self.setup_help_menu())
-        window.setMenuBar(self.menubar)
+        self.addMenu(self.setup_file_menu())
+        # self.addMenu(self.setup_tools_menu())
+        # self.addMenu(self.setup_extensions_menu())
+        self.addMenu(self.setup_view_menu())
+        self.addMenu(self.setup_windows_menu())
+        self.addMenu(self.setup_help_menu())
         self.connect_signals()
 
     def connect_signals(self):

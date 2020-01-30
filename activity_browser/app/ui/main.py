@@ -9,14 +9,11 @@ from .menu_bar import MenuBar
 from .panels import LeftPanel, RightPanel
 from .statusbar import Statusbar
 from .utils import StdRedirector
-from ..signals import signals
 
 
 class MainWindow(QtWidgets.QMainWindow):
-    DEFAULT_NO_METHOD = 'No method selected yet'
-
     def __init__(self):
-        super(MainWindow, self).__init__(None)
+        super().__init__(None)
 
         self.setLocale(QtCore.QLocale(QtCore.QLocale.English, QtCore.QLocale.UnitedStates))
 
@@ -42,25 +39,25 @@ class MainWindow(QtWidgets.QMainWindow):
         # Left (0) and right (1) panels have a default screen division, set by the setStretchfactor() commands
         # the last argument is the proportion of screen it takes up from total (so 1 and 3 gives 1/4 and 3/4)
 
-        self.main_horizontal_box = QtWidgets.QHBoxLayout()
+        main_horizontal_box = QtWidgets.QHBoxLayout()
 
         self.left_panel = LeftPanel(self)
         self.right_panel = RightPanel(self)
 
-        self.splitter_horizontal = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        self.splitter_horizontal.addWidget(self.left_panel)
-        self.splitter_horizontal.addWidget(self.right_panel)
-        self.splitter_horizontal.setStretchFactor(0, 1)
-        self.splitter_horizontal.setStretchFactor(1, 3)
-        self.main_horizontal_box.addWidget(self.splitter_horizontal)
+        splitter_horizontal = QtWidgets.QSplitter(QtCore.Qt.Horizontal, self)
+        splitter_horizontal.addWidget(self.left_panel)
+        splitter_horizontal.addWidget(self.right_panel)
+        splitter_horizontal.setStretchFactor(0, 1)
+        splitter_horizontal.setStretchFactor(1, 3)
+        main_horizontal_box.addWidget(splitter_horizontal)
 
-        self.vertical_container = QtWidgets.QVBoxLayout()
-        self.vertical_container.addLayout(self.main_horizontal_box)
+        vertical_container = QtWidgets.QVBoxLayout()
+        vertical_container.addLayout(main_horizontal_box)
 
         self.main_widget = QtWidgets.QWidget()
         self.main_widget.icon = qicons.main_window
         self.main_widget.name = "&Main Window"
-        self.main_widget.setLayout(self.vertical_container)
+        self.main_widget.setLayout(vertical_container)
 
         # Debug/working... stack
         self.log = QtWidgets.QTextEdit(self)
@@ -76,22 +73,27 @@ class MainWindow(QtWidgets.QMainWindow):
         self.debug_widget.name = "&Debug Window"
         self.debug_widget.setLayout(working_layout)
 
-        self.stacked = QtWidgets.QStackedWidget()
+        self.shortcut_debug = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self)
+
+        self.stacked = QtWidgets.QStackedWidget(self)
         self.stacked.addWidget(self.main_widget)
         self.stacked.addWidget(self.debug_widget)
         self.setCentralWidget(self.stacked)
+        self.last_widget = self.stacked.currentWidget()
 
         # Layout: extra items outside main layout
         self.menu_bar = MenuBar(self)
-        self.statusbar = Statusbar(self)
+        self.setMenuBar(self.menu_bar)
+        self.status_bar = Statusbar(self)
+        self.setStatusBar(self.status_bar)
 
         self.connect_signals()
 
     def connect_signals(self):
         # Keyboard shortcuts
-        self.shortcut_debug = QtWidgets.QShortcut(QtGui.QKeySequence("Ctrl+D"), self)
         self.shortcut_debug.activated.connect(self.toggle_debug_window)
 
+    @QtCore.Slot(name="toggleDebugWindow")
     def toggle_debug_window(self):
         """Toggle between any window and the debug window."""
         if self.stacked.currentWidget() != self.debug_widget:
@@ -100,13 +102,10 @@ class MainWindow(QtWidgets.QMainWindow):
             # print("Switching to debug window")
         else:
             # print("Switching back to last widget")
-            if self.last_widget:
-                try:
-                    self.stacked.setCurrentWidget(self.last_widget)
-                except:
-                    print("Previous Widget has been deleted in the meantime. Switching to main window.")
-                    self.stacked.setCurrentWidget(self.main_widget)
-            else:  # switch to main window
+            if self.stacked.indexOf(self.last_widget) >= 0:
+                self.stacked.setCurrentWidget(self.last_widget)
+            else:
+                print("Previous Widget has been deleted in the meantime. Switching to main window.")
                 self.stacked.setCurrentWidget(self.main_widget)
 
     def add_tab_to_panel(self, obj, label, side):
