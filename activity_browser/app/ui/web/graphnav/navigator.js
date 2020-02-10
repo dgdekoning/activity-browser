@@ -174,10 +174,10 @@ d3.demo.canvas = function() {
             .attr("height", height)
             .attr("transform", "translate(0,0)");
 
-        panCanvas.append("rect")
-            .attr("class", "background")
-            .attr("width", width)
-            .attr("height", height);
+        //panCanvas.append("rect")
+        //    .attr("class", "background")
+        //    .attr("width", width)
+        //    .attr("height", height);
 
         var zoom = d3.zoom()
             .scaleExtent([0.25, 5]);
@@ -515,19 +515,15 @@ var div = d3.select("#canvasqPWKOg").append("div")
 
 
 var render = dagreD3.render();
-//var graph = {}
 
 function update_graph(json_data) {
-    console.log("Updating Graph")
-	data = JSON.parse(json_data)
-	var graph_test = d3.select()
-	    .append("svg");
+    console.log("Updating Graph");
+	data = JSON.parse(json_data);
 
 	heading.innerHTML = data.title;
 
 	// reset graph
-	graph = new dagre.graphlib.Graph({ multigraph: true });
-	graph.setGraph({});
+	graph = new dagre.graphlib.Graph({ multigraph: true }).setGraph({});
 
     // nodes --> graph
     data.nodes.forEach(function(n) {
