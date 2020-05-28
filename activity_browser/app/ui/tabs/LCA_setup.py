@@ -16,6 +16,7 @@ from ..tables import (
     CSActivityTable, CSList, CSMethodsTable, PresamplesList, ScenarioImportTable
 )
 from ..widgets import ExcelReadDialog
+from .base import BaseRightTab
 
 """
 Lifecycle of a calculation setup
@@ -83,7 +84,7 @@ The currently selected calculation setup is retrieved by getting the currently s
 PresamplesTuple = namedtuple("presamples", ["label", "list", "button", "remove"])
 
 
-class LCASetupTab(QtWidgets.QWidget):
+class LCASetupTab(BaseRightTab):
     DEFAULT = 0
     SCENARIOS = 1
     PRESAMPLES = 2
@@ -92,7 +93,6 @@ class LCASetupTab(QtWidgets.QWidget):
         super().__init__(parent)
 
         self.cs_panel = QtWidgets.QWidget(self)
-        cs_panel_layout = QtWidgets.QVBoxLayout()
         self.scenario_panel = ScenarioImportPanel(self)
         self.scenario_panel.hide()
 
@@ -116,7 +116,10 @@ class LCASetupTab(QtWidgets.QWidget):
             obj.hide()
         self.scenario_calc_btn = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.scenario_calc_btn.hide()
+        self._construct_layout()
+        self._connect_signals()
 
+    def _construct_layout(self):
         name_row = QtWidgets.QHBoxLayout()
         name_row.addWidget(header('Calculation Setups:'))
         name_row.addWidget(self.list_widget)
@@ -140,6 +143,7 @@ class LCASetupTab(QtWidgets.QWidget):
         container.addLayout(calc_row)
         container.addWidget(horizontal_line())
 
+        cs_panel_layout = QtWidgets.QVBoxLayout()
         cs_panel_layout.addWidget(header('Functional units:'))
         cs_panel_layout.addWidget(self.activities_table)
         cs_panel_layout.addWidget(horizontal_line())
@@ -152,9 +156,7 @@ class LCASetupTab(QtWidgets.QWidget):
 
         self.setLayout(container)
 
-        self.connect_signals()
-
-    def connect_signals(self):
+    def _connect_signals(self):
         # Signals
         self.calculate_button.clicked.connect(self.start_calculation)
         self.presamples.button.clicked.connect(self.presamples_calculation)
@@ -280,7 +282,7 @@ class LCASetupTab(QtWidgets.QWidget):
         self.scenario_calc_btn.setEnabled(valid_cs)
 
 
-class ScenarioImportPanel(QtWidgets.QWidget):
+class ScenarioImportPanel(BaseRightTab):
     MAX_TABLES = 2
 
     """Special kind of QWidget that contains one or more tables side by side."""
@@ -288,16 +290,12 @@ class ScenarioImportPanel(QtWidgets.QWidget):
         super().__init__(parent)
 
         self.tables = []
-        layout = QtWidgets.QVBoxLayout()
-        row = QtWidgets.QHBoxLayout()
         self.scenario_tables = QtWidgets.QHBoxLayout()
         self.table_btn = QtWidgets.QPushButton(qicons.add, "Add")
 
         self.combine_label = QtWidgets.QLabel("Combine tables by:")
         self.group_box = QtWidgets.QGroupBox()
         self.group_box.setStyleSheet(style_group_box.border_title)
-        input_field_layout = QtWidgets.QHBoxLayout()
-        self.group_box.setLayout(input_field_layout)
         self.combine_group = QtWidgets.QButtonGroup()
         self.combine_group.setExclusive(True)
         self.product_choice = QtWidgets.QCheckBox("Product")
@@ -305,11 +303,18 @@ class ScenarioImportPanel(QtWidgets.QWidget):
         self.addition_choice = QtWidgets.QCheckBox("Addition")
         self.combine_group.addButton(self.product_choice)
         self.combine_group.addButton(self.addition_choice)
+        self.group_box.setHidden(True)
+        self._construct_layout()
+        self._connect_signals()
+
+    def _construct_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+        input_field_layout = QtWidgets.QHBoxLayout()
+        self.group_box.setLayout(input_field_layout)
         input_field_layout.addWidget(self.combine_label)
         input_field_layout.addWidget(self.product_choice)
         input_field_layout.addWidget(self.addition_choice)
-        self.group_box.setHidden(True)
-
+        row = QtWidgets.QHBoxLayout()
         row.addWidget(header("Scenarios"))
         row.addWidget(self.table_btn)
         row.addWidget(self.group_box)
@@ -318,7 +323,6 @@ class ScenarioImportPanel(QtWidgets.QWidget):
         layout.addLayout(self.scenario_tables)
         layout.addStretch(1)
         self.setLayout(layout)
-        self._connect_signals()
 
     def _connect_signals(self) -> None:
         self.table_btn.clicked.connect(self.add_table)
@@ -334,10 +338,6 @@ class ScenarioImportPanel(QtWidgets.QWidget):
 
     def combined_dataframe(self, kind: str = "product") -> pd.DataFrame:
         """Return a dataframe that combines the scenarios of multiple tables.
-
-        TODO: finish implementing pandas methods for combining all
-         dataframes into a single whole in different ways.
-         Currently only 1 table can be loaded.
         """
         if not self.tables:
             # Return an empty dataframe, will almost immediately cause a
@@ -397,7 +397,7 @@ class ScenarioImportPanel(QtWidgets.QWidget):
         table.sync_superstructure(df)
 
 
-class ScenarioImportWidget(QtWidgets.QWidget):
+class ScenarioImportWidget(BaseRightTab):
     def __init__(self, index: int, parent=None):
         super().__init__(parent)
 
@@ -407,19 +407,19 @@ class ScenarioImportWidget(QtWidgets.QWidget):
         self.remove_btn = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.table = ScenarioImportTable(self)
         self.scenario_df = pd.DataFrame()
+        self._construct_layout()
+        self._connect_signals()
 
+    def _construct_layout(self):
         layout = QtWidgets.QVBoxLayout()
-
         row = QtWidgets.QHBoxLayout()
         row.addWidget(self.scenario_name)
         row.addWidget(self.load_btn)
         row.addStretch(1)
         row.addWidget(self.remove_btn)
-
         layout.addLayout(row)
         layout.addWidget(self.table)
         self.setLayout(layout)
-        self._connect_signals()
 
     def _connect_signals(self):
         self.load_btn.clicked.connect(self.load_action)
