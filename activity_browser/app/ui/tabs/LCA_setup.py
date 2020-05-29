@@ -88,6 +88,19 @@ class LCASetupTab(BaseRightTab):
     DEFAULT = 0
     SCENARIOS = 1
     PRESAMPLES = 2
+    EXPLANATIONS = [
+        "<b>Standard Life Cycle Assessment</b>. Click, drag and drop one or more"
+        " functional units from a database as well as one or more impact"
+        " categories into their respective tables.",
+        "<b>Scenario-based LCA</b>. By loading one or more specially formatted"
+        " Excel files different 'scenarios' can be explored. This method is"
+        " somewhat similar to the Presamples LCA without having to prepare"
+        " arrays in advance.",
+        "<b>Presamples LCA</b>. Presamples provides functionality which uses arrays of"
+        " prepared values to alter the A and B matrices of an LCA. Please look"
+        " <a href='https://github.com/PascalLesage/presamples'>here</a>"
+        " for a more in-depth explanation.",
+    ]
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -105,6 +118,7 @@ class LCASetupTab(BaseRightTab):
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
         self.calculation_type = QtWidgets.QComboBox()
         self.calculation_type.addItems(["Standard LCA", "Scenario-based LCA", "Presamples LCA"])
+        self.explain_text = next(iter(self.EXPLANATIONS))
         self.calculate_button = QtWidgets.QPushButton(qicons.calculate, "Calculate")
         self.presamples = PresamplesTuple(
             QtWidgets.QLabel("Prepared scenarios:"),
@@ -136,6 +150,9 @@ class LCASetupTab(BaseRightTab):
         calc_row.addWidget(self.presamples.label)
         calc_row.addWidget(self.presamples.list)
         calc_row.addWidget(self.presamples.remove)
+        tool = QtWidgets.QToolBar()
+        tool.addAction(qicons.question, "About LCA Setup", self.explanation)
+        calc_row.addWidget(tool)
         calc_row.addStretch(1)
 
         container = QtWidgets.QVBoxLayout()
@@ -274,6 +291,7 @@ class LCASetupTab(BaseRightTab):
                 obj.show()
             self.scenario_calc_btn.hide()
             self.scenario_panel.hide()
+        self.explain_text = self.EXPLANATIONS[index]
         self.cs_panel.updateGeometry()
 
     def enable_calculations(self):
