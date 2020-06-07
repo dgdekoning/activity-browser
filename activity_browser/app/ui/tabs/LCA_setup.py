@@ -114,8 +114,11 @@ class LCASetupTab(BaseRightTab):
         self.list_widget = CSList(self)
 
         self.new_cs_button = QtWidgets.QPushButton(qicons.add, "New")
+        self.new_cs_button.setToolTip("Create a new Calculation Setup")
         self.rename_cs_button = QtWidgets.QPushButton(qicons.edit, "Rename")
+        self.rename_cs_button.setToolTip("Rename the current Calculation Setup")
         self.delete_cs_button = QtWidgets.QPushButton(qicons.delete, "Delete")
+        self.delete_cs_button.setToolTip("Delete the current Calculation Setup")
         self.calculation_type = QtWidgets.QComboBox()
         self.calculation_type.addItems(["Standard LCA", "Scenario-based LCA", "Presamples LCA"])
         self.explain_text = next(iter(self.EXPLANATIONS))
@@ -310,6 +313,7 @@ class ScenarioImportPanel(BaseRightTab):
         self.tables = []
         self.scenario_tables = QtWidgets.QHBoxLayout()
         self.table_btn = QtWidgets.QPushButton(qicons.add, "Add")
+        self.table_btn.setToolTip("Add new table scenario table")
 
         self.combine_label = QtWidgets.QLabel("Combine tables by:")
         self.group_box = QtWidgets.QGroupBox()
@@ -317,13 +321,30 @@ class ScenarioImportPanel(BaseRightTab):
         self.combine_group = QtWidgets.QButtonGroup()
         self.combine_group.setExclusive(True)
         self.product_choice = QtWidgets.QCheckBox("Product")
+        self.product_choice.setToolTip("Combine scenarios cross-product wise")
         self.product_choice.setChecked(True)
         self.addition_choice = QtWidgets.QCheckBox("Addition")
+        self.addition_choice.setToolTip("Combine scenarios with the same name")
         self.combine_group.addButton(self.product_choice)
         self.combine_group.addButton(self.addition_choice)
         self.group_box.setHidden(True)
         self._construct_layout()
         self._connect_signals()
+        self.explain_text = """
+Load excel files containing specifically formatted data that allows AB to
+precisely alter the values of exchanges in processes, allowing for the fast
+calculation of many different kinds of scenarios.
+
+Multiple files or tables can be loaded at the same time, after which a specific
+kind of combination of these scenario tables will be done when  'Calculate' is
+clicked.
+
+Keep in mind:
+- If the same exchange is found more than one time in one scenario file, the
+last instance of the exchange is used.
+- If the same exchange is found in multiple scenario files, the instance in
+the right-most one is used.
+"""
 
     def _construct_layout(self):
         layout = QtWidgets.QVBoxLayout()
@@ -336,6 +357,9 @@ class ScenarioImportPanel(BaseRightTab):
         row.addWidget(header("Scenarios"))
         row.addWidget(self.table_btn)
         row.addWidget(self.group_box)
+        bar = QtWidgets.QToolBar()
+        bar.addAction(qicons.question, "About scenarios", self.explanation)
+        row.addWidget(bar)
         row.addStretch(1)
         layout.addLayout(row)
         layout.addLayout(self.scenario_tables)
@@ -422,7 +446,9 @@ class ScenarioImportWidget(BaseRightTab):
         self.index = index
         self.scenario_name = QtWidgets.QLabel("<filename>", self)
         self.load_btn = QtWidgets.QPushButton(qicons.import_db, "Load")
+        self.load_btn.setToolTip("Load an excel file with scenario data")
         self.remove_btn = QtWidgets.QPushButton(qicons.delete, "Delete")
+        self.remove_btn.setToolTip("Clear and remove this scenario table")
         self.table = ScenarioImportTable(self)
         self.scenario_df = pd.DataFrame()
         self._construct_layout()
