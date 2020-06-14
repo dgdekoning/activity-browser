@@ -129,8 +129,11 @@ class MonteCarloLCA(object):
                 param_exchanges = self.param_rng.next()
                 # Select the A/B matrix subsets, generate a mask and apply
                 # the updated exchange values to the respective vectors.
-                subset = param_exchanges[np.isin(param_exchanges["type"], [0, 1])]
-                mask = np.isin(self.lca.tech_params[self.param_cols], subset[self.param_cols])
+                subset = param_exchanges[np.argwhere(np.isin(param_exchanges["type"], [0, 1]))]
+                ps = self.lca.tech_params[self.param_cols]
+                pars = subset[self.param_cols]
+                idx = np.argwhere(np.isin(ps, pars))
+                mask = np.isin(ps, pars)
                 tech_vector[mask] = subset["amount"]
                 subset = param_exchanges[param_exchanges["type"] == 2]
                 mask = np.isin(self.lca.bio_params[self.param_cols], subset[self.param_cols])
