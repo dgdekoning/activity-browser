@@ -226,3 +226,9 @@ class MonteCarloParameterManager(ParameterManager, Iterator):
         self.parameters.update(values)
         data = self.calculate()
         return self.indices.mock_params(data)
+
+    def next2(self) -> np.ndarray:
+        values = self.mc_generator.next()
+        self.parameters.update(values)
+        data = self.calculate()
+        return self.indices.mock_params2(data)

@@ -183,6 +183,15 @@ class Indices(UserList):
             data[i] = (*d.ids_exc_type, values[i])
         return data
 
+    def mock_params2(self, values) -> np.ndarray:
+        assert len(self.data) == len(values)
+        data = np.zeros(len(self.data), dtype=[
+            ('input', 'O'), ('output', 'O'), ('type', 'u1'), ('amount', '<f4')
+        ])
+        for i, d in enumerate(self.data):
+            data[i] = (d.input, d.output, d.exchange_type, values[i])
+        return data
+
 
 class StaticParameters(object):
     """Contains the initial values for all the parameters in the project.
