@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Iterable, Optional, Union
+from typing import Iterable, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -368,11 +368,12 @@ class Contributions(object):
         topcontribution_dict = dict()
         for fu_or_method, col in FU_M_index.items():
             top_contribution = ca.sort_array(C[col, :], limit=limit, limit_type=limit_type)
-            cont_per = dict()
-            cont_per.update({
-                ('Total', ''): C[col, :].sum(),
-                ('Rest', ''): C[col, :].sum() - top_contribution[:, 0].sum(),
-                })
+            top_sum = top_contribution[:, 0].sum()
+            contrib_sum = C[col, :].sum()
+            cont_per = {
+                ('Total', ''): contrib_sum,
+                ('Rest', ''): contrib_sum - top_sum,
+            }
             for value, index in top_contribution:
                 cont_per.update({rev_dict[index]: value})
             topcontribution_dict.update({fu_or_method: cont_per})
@@ -425,7 +426,7 @@ class Contributions(object):
 
     @classmethod
     def join_df_with_metadata(cls, df, x_fields=None, y_fields=None,
-                              special_keys=None):
+                              special_keys: Optional[list] = None):
         """Join a dataframe that has keys on the index with metadata.
 
         Metadata fields are defined in x_fields.
@@ -457,7 +458,7 @@ class Contributions(object):
             df.index = pd.MultiIndex.from_tuples(df.index)
 
         # get metadata for rows
-        keys = [k for k in df.index if k in AB_metadata.index]
+        keys = df.index.intersection(AB_metadata.index).to_list()
         metadata = AB_metadata.get_metadata(keys, x_fields)
 
         # join data with metadata
@@ -466,9 +467,9 @@ class Contributions(object):
         if special_keys:
             # replace index keys with labels
             try:  # first put Total and Rest to the first two positions in the dataframe
-                index_for_Rest_Total = special_keys + keys
-                joined = joined.loc[index_for_Rest_Total]
-            except:
+                complete_index = special_keys + keys
+                joined = joined.reindex(complete_index, axis="index")
+            except KeyError as e:
                 print('Could not put Total and Rest on positions 0 and 1 in the dataframe.')
         joined.index = cls.get_labels(joined.index, fields=x_fields)
         return joined
@@ -593,13 +594,13 @@ class Contributions(object):
                 dataset[contribution], self.mlca.func_key_dict[functional_unit], 0
             )
 
-    def aggregate_by_parameters(self, C: np.ndarray, inventory: str,
-                                parameters: Union[str, list] = None):
+    def aggregate_by_parameters(self, contrib: np.ndarray, inventory: str,
+                                parameters: Optional[Union[str, list]] = None) -> Tuple[np.ndarray, dict, Optional[list]]:
         """Perform aggregation of the contribution data given parameters
 
         Parameters
         ----------
-        C : `numpy.ndarray`
+        contrib : `numpy.ndarray`
             2-dimensional contribution array
         inventory: str
             Either 'biosphere' or 'technosphere', used to determine which
@@ -615,20 +616,23 @@ class Contributions(object):
         mask_index : dict
             Contains all of the values of the aggregation mask, linked to
             their indexes
-        mask : list or dictview or None
-            An optional list or dictview of the mask_index values
+        mask : list or None
+            An optional list of the mask_index values
 
         -------
 
         """
         rev_index, keys, fields = self.aggregate_data[inventory]
         if not parameters:
-            return C, rev_index, None
+            return contrib, rev_index, None
 
-        df = pd.DataFrame(C).T
-        columns = list(range(C.shape[0]))
+        df = pd.DataFrame(contrib).T
+        columns = list(range(contrib.shape[0]))
         df.index = pd.MultiIndex.from_tuples(rev_index.values())
         metadata = AB_metadata.get_metadata(list(keys), fields)
+
+        # replace all 0 values with NaN and drop all rows with only NaNs
+        df = df.replace(0, np.nan).dropna(axis='index', how='all').replace(np.nan, 0.0)
 
         joined = metadata.join(df)
         joined.reset_index(inplace=True, drop=True)
@@ -636,7 +640,7 @@ class Contributions(object):
         aggregated = grouped[columns].sum()
         mask_index = {i: m for i, m in enumerate(aggregated.index)}
 
-        return aggregated.T.values, mask_index, mask_index.values()
+        return aggregated.T.values, mask_index, list(mask_index.values())
 
     def _contribution_rows(self, contribution: str, aggregator=None):
         if aggregator is None:
@@ -679,19 +683,19 @@ class Contributions(object):
             Annotated top-contribution dataframe
 
         """
-        C = self.get_contributions(self.EF, functional_unit, method)
+        contrib = self.get_contributions(self.EF, functional_unit, method)
 
         x_fields = self._contribution_rows(self.EF, aggregator)
         index, y_fields = self._contribution_index_cols(
             functional_unit=functional_unit, method=method
         )
-        C, rev_index, mask = self.aggregate_by_parameters(C, self.BIOS, aggregator)
+        data, rev_index, mask = self.aggregate_by_parameters(contrib, self.BIOS, aggregator)
 
         # Normalise if required
         if normalize:
-            C = self.normalize(C)
+            data /= np.linalg.norm(data, ord=1, axis=1, keepdims=True)
 
-        top_cont_dict = self._build_dict(C, index, rev_index, limit, limit_type)
+        top_cont_dict = self._build_dict(data, index, rev_index, limit, limit_type)
         return self.get_labelled_contribution_dict(
             top_cont_dict, x_fields=x_fields, y_fields=y_fields, mask=mask
         )
@@ -726,19 +730,19 @@ class Contributions(object):
             Annotated top-contribution dataframe
 
         """
-        C = self.get_contributions(self.ACT, functional_unit, method)
+        contrib = self.get_contributions(self.ACT, functional_unit, method)
 
         x_fields = self._contribution_rows(self.ACT, aggregator)
         index, y_fields = self._contribution_index_cols(
             functional_unit=functional_unit, method=method
         )
-        C, rev_index, mask = self.aggregate_by_parameters(C, self.TECH, aggregator)
+        data, rev_index, mask = self.aggregate_by_parameters(contrib, self.TECH, aggregator)
 
         # Normalise if required
         if normalize:
-            C = self.normalize(C)
+            data /= np.linalg.norm(data, ord=1, axis=1, keepdims=True)
 
-        top_cont_dict = self._build_dict(C, index, rev_index, limit, limit_type)
+        top_cont_dict = self._build_dict(data, index, rev_index, limit, limit_type)
         return self.get_labelled_contribution_dict(
             top_cont_dict, x_fields=x_fields, y_fields=y_fields, mask=mask
         )
