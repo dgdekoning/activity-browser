@@ -329,8 +329,9 @@ class Controller(object):
                 type="process",
             )
             new_act.save()
-            production_exchange = new_act.new_exchange(amount=1, type="production")
-            production_exchange.input = new_act
+            production_exchange = new_act.new_exchange(
+                input=new_act, amount=1, type="production"
+            )
             production_exchange.save()
             signals.open_activity_tab.emit(new_act.key)
             signals.metadata_changed.emit(new_act.key)
