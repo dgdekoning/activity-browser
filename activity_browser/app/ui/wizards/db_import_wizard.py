@@ -17,6 +17,7 @@ from bw2data.backends import SQLiteBackend
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Signal, Slot
 
+from ...bwutils.commontasks import is_technosphere_db
 from ...bwutils.strategies import relink_exchanges_bw2package
 from ...signals import signals
 from ..widgets import DatabaseRelinkDialog
@@ -872,6 +873,92 @@ class LocalDatabaseImportPage(QtWidgets.QWizardPage):
                 )
         self.complete = all([exists, valid])
         self.completeChanged.emit()
+
+    def isComplete(self):
+        return self.complete
+
+
+class ExcelDatabaseImport(QtWidgets.QWizardPage):
+    def __init__(self, parent=None):
+        super().__init__(parent=parent)
+        self.wizard: QtWidgets.QWizard = parent
+        self.path = QtWidgets.QLineEdit()
+        self.path.setReadOnly(True)
+        self.path.textChanged.connect(self.changed)
+        self.path_btn = QtWidgets.QPushButton("Browse")
+        self.path_btn.clicked.connect(self.browse)
+        self.overwrite_db = QtWidgets.QCheckBox("Overwrite database.")
+        self.overwrite_db.setToolTip("Will overwrite existing databases with the same name.")
+        self.overwrite_db.setChecked(True)
+        self.purge_params = QtWidgets.QCheckBox("Remove existing parameters from project.")
+        self.purge_params.setToolTip("Will only remove parameters of the type found in the file.")
+        self.purge_params.setChecked(False)
+        self.link_option = QtWidgets.QCheckBox("Link against existing technosphere.")
+        self.link_option.setToolTip("Attempts to find unlinked exchanges in the selected database.")
+        self.link_option.setChecked(False)
+        self.link_choice = QtWidgets.QComboBox()
+        self.link_choice.addItems([db for db in bw.databases if is_technosphere_db(db)])
+        self.link_choice.setHidden(True)
+        self.link_option.toggled.connect(self.toggle_dropdown)
+        self.complete = False
+
+        option_box = QtWidgets.QGroupBox("Import excel database file:")
+        grid_layout = QtWidgets.QGridLayout()
+        layout = QtWidgets.QVBoxLayout()
+        grid_layout.addWidget(QtWidgets.QLabel("Path to file*"), 0, 0, 1, 1)
+        grid_layout.addWidget(self.path, 0, 1, 1, 2)
+        grid_layout.addWidget(self.path_btn, 0, 3, 1, 1)
+        grid_layout.addWidget(self.overwrite_db, 1, 0, 1, 3)
+        grid_layout.addWidget(self.purge_params, 2, 0, 1, 3)
+        grid_layout.addWidget(self.link_option, 3, 0, 1, 2)
+        grid_layout.addWidget(self.link_choice, 3, 2, 1, 2)
+        option_box.setLayout(grid_layout)
+        layout.addWidget(option_box)
+        self.setLayout(layout)
+
+        # Register field to ensure user cannot advance without selecting file.
+        self.registerField("excel_path*", self.path)
+        self.registerField("overwrite_db", self.overwrite_db)
+        self.registerField("purge_params", self.purge_params)
+        self.registerField("do_link", self.link_option)
+        self.registerField("link_db", self.link_choice)
+
+    def initializePage(self):
+        self.path.clear()
+        self.overwrite_db.setChecked(True)
+        self.purge_params.setChecked(False)
+        self.link_option.setChecked(False)
+
+    def nextId(self):
+        self.wizard.setField("archive_path", self.path.text())
+        return DatabaseImportWizard.DB_NAME
+
+    @Slot(name="browseFile")
+    def browse(self) -> None:
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            parent=self, caption="Select an excel database file",
+            filter="Excel (*.xlsx);; All Files (*.*)"
+        )
+        if path:
+            self.path.setText(path)
+
+    @Slot(name="pathChanged")
+    def changed(self) -> None:
+        exists = True if os.path.isfile(self.path.text()) else False
+        valid = False
+        if exists:
+            base, ext = os.path.splitext(self.path.text())
+            valid = True if ext.lower() in {".xlsx", ".xls"} else False
+            if not valid:
+                import_signals.import_failure.emit(
+                    ("Invalid extension", "Expecting excel file to have '.xls' or '.xlsx' extension")
+                )
+        self.complete = all([exists, valid])
+        self.completeChanged.emit()
+
+    @Slot(bool, name="toggleDropdown")
+    def toggle_dropdown(self, toggle: bool) -> None:
+        self.link_choice.setHidden(not toggle)
 
     def isComplete(self):
         return self.complete
