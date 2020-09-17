@@ -11,7 +11,7 @@ import requests
 import brightway2 as bw
 from bw2data.errors import InvalidExchange, UnknownObject
 from bw2io import SingleOutputEcospold2Importer
-from bw2io.errors import InvalidPackage
+from bw2io.errors import InvalidPackage, StrategyError
 from bw2io.extractors import Ecospold2DataExtractor
 from bw2data.backends import SQLiteBackend
 from PySide2 import QtWidgets, QtCore
@@ -19,6 +19,7 @@ from PySide2.QtCore import Signal, Slot
 
 from ...bwutils.commontasks import is_technosphere_db
 from ...bwutils.strategies import relink_exchanges_bw2package
+from ...bwutils.importers import ABExcelImporter
 from ...signals import signals
 from ..widgets import DatabaseRelinkDialog
 
@@ -33,9 +34,10 @@ class DatabaseImportWizard(QtWidgets.QWizard):
     ARCHIVE = 4
     DIR = 5
     LOCAL = 6
-    DB_NAME = 7
-    CONFIRM = 8
-    IMPORT = 9
+    EXCEL = 7
+    DB_NAME = 8
+    CONFIRM = 9
+    IMPORT = 10
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -50,12 +52,14 @@ class DatabaseImportWizard(QtWidgets.QWizard):
         self.ecoinvent_login_page = EcoinventLoginPage(self)
         self.ecoinvent_version_page = EcoinventVersionPage(self)
         self.local_import_page = LocalDatabaseImportPage(self)
+        self.excel_import_page = ExcelDatabaseImport(self)
         self.setPage(self.IMPORT_TYPE, self.import_type_page)
         self.setPage(self.EI_LOGIN, self.ecoinvent_login_page)
         self.setPage(self.EI_VERSION, self.ecoinvent_version_page)
         self.setPage(self.ARCHIVE, self.archive_page)
         self.setPage(self.DIR, self.choose_dir_page)
         self.setPage(self.LOCAL, self.local_import_page)
+        self.setPage(self.EXCEL, self.excel_import_page)
         self.setPage(self.DB_NAME, self.db_name_page)
         self.setPage(self.CONFIRM, self.confirmation_page)
         self.setPage(self.IMPORT, self.import_page)
@@ -120,12 +124,15 @@ class ImportTypePage(QtWidgets.QWizardPage):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.wizard = parent
-        options = ['Ecoinvent: download (login required)',
-                   'Ecoinvent: local 7z-archive or previously downloaded database',
-                   'Ecoinvent: local directory with ecospold2 files',
-                   'Forwast: download',
-                   "Local brightway database file"]
-        self.radio_buttons = [QtWidgets.QRadioButton(o) for o in options]
+        self.options = [
+            ("Ecoinvent: download (login required)", "homepage"),
+            ("Ecoinvent: local 7z-archive or previously downloaded database", "archive", DatabaseImportWizard.ARCHIVE),
+            ("Ecoinvent: local directory with ecospold2 files", "directory", DatabaseImportWizard.DIR),
+            ("Forwast: download", "forwast", DatabaseImportWizard.DB_NAME),
+            ("Local Excel file", "local", DatabaseImportWizard.EXCEL),
+            ("Local brightway database file", "local", DatabaseImportWizard.LOCAL),
+        ]
+        self.radio_buttons = [QtWidgets.QRadioButton(o[0]) for o in self.options]
         self.option_box = QtWidgets.QGroupBox('Choose type of database import')
         box_layout = QtWidgets.QVBoxLayout()
         for i, button in enumerate(self.radio_buttons):
@@ -140,24 +147,14 @@ class ImportTypePage(QtWidgets.QWizardPage):
 
     def nextId(self):
         option_id = [b.isChecked() for b in self.radio_buttons].index(True)
-        if option_id == 4:
-            self.wizard.import_type = "local"
-            return DatabaseImportWizard.LOCAL
-        if option_id == 3:
-            self.wizard.import_type = 'forwast'
-            return DatabaseImportWizard.DB_NAME
-        if option_id == 2:
-            self.wizard.import_type = 'directory'
-            return DatabaseImportWizard.DIR
-        elif option_id == 1:
-            self.wizard.import_type = 'archive'
-            return DatabaseImportWizard.ARCHIVE
-        else:
-            self.wizard.import_type = 'homepage'
+        self.wizard.import_type = self.options[option_id][1]
+        if option_id == 0:
             if hasattr(self.wizard.ecoinvent_login_page, 'valid_pw'):
                 return DatabaseImportWizard.EI_VERSION
             else:
                 return DatabaseImportWizard.EI_LOGIN
+        else:
+            return self.options[option_id][2]
 
 
 class ChooseDirPage(QtWidgets.QWizardPage):
@@ -455,10 +452,16 @@ class ImportPage(QtWidgets.QWizardPage):
         elif self.wizard.import_type == 'forwast':
             self.main_worker_thread.update(db_name=self.field('db_name'), use_forwast=True)
         elif self.wizard.import_type == "local":
-            self.main_worker_thread.update(db_name=self.field("db_name"),
-                                           archive_path=self.field("archive_path"),
-                                           use_local=True,
-                                           relink=self.relink_data)
+            kwargs = {
+                "db_name": self.field("db_name"),
+                "archive_path": self.field("archive_path"),
+                "use_local": True,
+                "relink": self.relink_data,
+                "overwrite": self.field("overwrite_db"),
+                "purge": self.field("purge_params"),
+                "linker": self.field("link_db") if self.field("do_link") else None,
+            }
+            self.main_worker_thread.update(**kwargs)
         else:
             self.main_worker_thread.update(db_name=self.field('db_name'))
         self.main_worker_thread.start()
@@ -545,15 +548,17 @@ class MainWorkerThread(QtCore.QThread):
         self.use_forwast = None
         self.use_local = None
         self.relink = {}
+        self.kwargs = {}
 
     def update(self, db_name: str, archive_path=None, datasets_path=None,
-               use_forwast=False, use_local=False, relink=None) -> None:
+               use_forwast=False, use_local=False, relink=None, **kwargs) -> None:
         self.db_name = db_name
         self.archive_path = archive_path
         self.datasets_path = datasets_path
         self.use_forwast = use_forwast
         self.use_local = use_local
         self.relink = relink or {}
+        self.kwargs = kwargs
 
     def run(self):
         if self.use_forwast:
@@ -643,9 +648,18 @@ class MainWorkerThread(QtCore.QThread):
             )
 
     def run_local_import(self):
+        """Perform an import on a local file.
+
+        This method supports both BW2Package files and excel files.
+        """
         try:
             import_signals.db_progress.emit(0, 0)
-            result = ABPackage.import_file(self.archive_path, relink=self.relink)
+            if os.path.splitext(self.archive_path)[1] in {".xlsx", ".xls"}:
+                result = ABExcelImporter.simple_automated_import(
+                    self.archive_path, **self.kwargs
+                )
+            else:
+                result = ABPackage.import_file(self.archive_path, relink=self.relink)
             if not import_signals.cancel_sentinel:
                 db = next(iter(result))
                 if db.name != self.db_name:
@@ -669,6 +683,11 @@ class MainWorkerThread(QtCore.QThread):
             self.delete_canceled_db()
             import_signals.import_failure.emit(
                 ("Unknown object", str(e))
+            )
+        except StrategyError as e:
+            self.delete_canceled_db()
+            import_signals.import_failure.emit(
+                ("Could not link exchanges", "One or more exchanges could not be linked.")
             )
 
     def delete_canceled_db(self):
