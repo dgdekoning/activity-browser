@@ -4,9 +4,10 @@ import itertools
 
 from asteval import Interpreter
 import brightway2 as bw
-import pandas as pd
+from bw2data.errors import UnknownObject
 from bw2data.parameters import (ActivityParameter, DatabaseParameter, Group,
                                 ProjectParameter)
+import pandas as pd
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QContextMenuEvent, QDragMoveEvent, QDropEvent
 from PySide2.QtWidgets import QAction, QInputDialog, QMenu
@@ -580,11 +581,12 @@ class ActivityParameterTable(BaseParameterTable):
             act = bw.get_activity(key)
             group = self.get_current_group(proxy)
             bw.parameters.remove_from_group(group, act)
+            exists = (ActivityParameter.select()
+                      .where(ActivityParameter.group == group).exists())
             # Also clear the group if there are no more parameters in it
-            if not (ActivityParameter.select()
-                    .where(ActivityParameter.group == group).exists()):
+            if not exists:
                 with bw.parameters.db.atomic():
-                    Group.get(name=group).delete_instance()
+                    Group.delete().where(Group.name == group).execute()
 
         bw.parameters.recalculate()
         signals.parameters_changed.emit()
@@ -683,7 +685,7 @@ class ExchangesTable(ABDictTreeView):
         signals.parameters_changed.emit()
 
     @staticmethod
-    @Slot()
+    @Slot(name="recalculateExchanges")
     def recalculate_exchanges():
         """ Will iterate through all activity parameters and rerun the
         formula interpretation for all exchanges.
@@ -693,6 +695,21 @@ class ExchangesTable(ABDictTreeView):
                 act = bw.get_activity((param.database, param.code))
                 bw.parameters.add_exchanges_to_group(param.group, act)
                 ActivityParameter.recalculate_exchanges(param.group)
-            except:
-                continue
+            except UnknownObject as e:
+                # Activity does not exist. Purge parameter.
+                with bw.parameters.db.transaction() as txn:
+                    ActivityParameter.delete().where(
+                        ActivityParameter.database == param.database,
+                        ActivityParameter.code == param.code
+                    ).execute()
+                    txn.commit()
+                    do_recalculate = (ActivityParameter.select()
+                                      .where(ActivityParameter.group == param.group).exists())
+                    if not do_recalculate:
+                        # Also clear other parameter objects if group is not
+                        # in use anymore
+                        bw.parameters.remove_exchanges_from_group(param.group, None, False)
+                        Group.delete().where(Group.name == param.group).execute()
+                if do_recalculate:
+                    ActivityParameter.recalculate_exchanges(param.group)
         signals.parameters_changed.emit()

@@ -3,7 +3,7 @@ import uuid
 from typing import Iterable, Optional
 
 import brightway2 as bw
-from bw2data.parameters import ActivityParameter
+from bw2data.parameters import ActivityParameter, Group
 from PySide2 import QtWidgets
 from PySide2.QtCore import QObject, Slot
 from bw2data.backends.peewee import sqlite3_lci_db
@@ -277,6 +277,7 @@ class Controller(object):
         if ok == QtWidgets.QMessageBox.Yes:
             project_settings.remove_db(name)
             del bw.databases[name]
+            Group.delete().where(Group.name == name).execute()
             self.change_project(bw.projects.current, reload=True)
 
     @Slot(str, QObject, name="relinkDatabase")
@@ -360,6 +361,7 @@ class Controller(object):
             signals.database_changed.emit(database_name)
             signals.databases_changed.emit()
 
+    @Slot(tuple, name="deleteActivity")
     def delete_activity(self, key):
         act = bw.get_activity(key)
         nu = len(act.upstream())
@@ -590,12 +592,17 @@ class Controller(object):
         """Remove all activity parameters and underlying exchange parameters
         for the given key.
         """
-        query = ActivityParameter.select(ActivityParameter.group).where(
+        query = (ActivityParameter.select(ActivityParameter.group).where(
             ActivityParameter.database == key[0],
             ActivityParameter.code == key[1],
-        )
+        ).namedtuples())
         for p in query.iterator():
             bw.parameters.remove_from_group(p.group, key)
+            exists = (ActivityParameter.select()
+                      .where(ActivityParameter.group == p.group)
+                      .exists())
+            if not exists:
+                Group.delete().where(Group.name == p.group).execute()
         bw.parameters.recalculate()
         signals.parameters_changed.emit()
 
@@ -619,6 +626,26 @@ class Controller(object):
         signals.parameters_changed.emit()
 
     @staticmethod
+    @Slot(str, str, str, name="deleteRemnantParameters")
+    def clear_broken_activity_parameter(database: str, code: str, group: str) -> None:
+        """Take the given information and attempt to remove all of the
+        downstream parameter information.
+        """
+        with bw.parameters.db.atomic():
+            bw.parameters.remove_exchanges_from_group(group, None, False)
+            ActivityParameter.delete().where(
+                ActivityParameter.database == database,
+                ActivityParameter.code == code
+            ).execute()
+            exists = (ActivityParameter.select()
+                      .where(ActivityParameter.group == group)
+                      .exists())
+            if not exists:
+                # Also clear Group if it is not in use anymore
+                Group.delete().where(Group.name == group).execute()
+
+# MetaDataStore
+    @staticmethod
     @Slot(name="triggerMetadataReset")
     def reset_metadata() -> None:
         AB_metadata.reset_metadata()
@@ -633,6 +660,7 @@ class Controller(object):
     def print_convenience_information(db_name: str) -> None:
         AB_metadata.print_convenience_information(db_name)
 
+# Presamples
     @staticmethod
     @Slot(str, name="removePresamplesPackage")
     def remove_presamples_package(name_id: str) -> None:

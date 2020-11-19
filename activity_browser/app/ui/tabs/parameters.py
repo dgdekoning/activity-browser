@@ -97,7 +97,7 @@ class ParameterDefinitionTab(BaseRightTab):
         self.explain_text = """
 <p>Please see the <a href="https://2.docs.brightway.dev/intro.html#parameterized-datasets">Brightway2 documentation</a>
 for the full explanation.</p>
-<p>Note that parameters can store 
+<p>Note that parameters can store
 <a href="https://2.docs.brightway.dev/intro.html#storing-uncertain-values">uncertain values</a>, but these are
 completely optional.</p>
 
