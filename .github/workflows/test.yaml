@@ -9,8 +9,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, macos-latest ]
-        python-version: [ 3.6, 3.7, 3.8 ]
+        os: [ ubuntu-latest ]  #[ ubuntu-latest, macos-latest ]
+        python-version: [ 3.7, 3.8 ]  #[ 3.6, 3.7, 3.8 ]
     steps:
       - uses: actions/checkout@v2
       - name: Testing python ${{ matrix.python-version }}
@@ -28,7 +28,7 @@ jobs:
       - name: Run tests
         run: pytest -v --cov=activity_browser
       - name: Upload coverage
-        if: ( ${{ success() }} && matrix.os == ubuntu-latest && matrix.python-version == 3.7 )
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.7' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # https://github.com/lemurheavy/coveralls-public/issues/1435#issuecomment-763357004
