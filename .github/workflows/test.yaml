@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         shell: bash
         run: |
-          conda install -q arrow brightway2 bw2io bw2data eidl \
+          conda install -q -y arrow brightway2 bw2io bw2data eidl \
             fuzzywuzzy matplotlib-base networkx pandas "pyside2=5.13" \
             salib seaborn presamples openpyxl "pytest>=5.2" pytest-qt \
             pytest-mock "xlrd=1.2.0" coveralls coverage pytest-cov
