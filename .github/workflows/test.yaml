@@ -1,5 +1,9 @@
 name: Pull request tests
-on: push
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -15,7 +19,6 @@ jobs:
           python-version: ${{ matrix.python-version }}
           conda-channels: conda-forge, cmutel, bsteubing, haasad, pascallesage
       - name: Install dependencies
-        shell: bash
         run: |
           conda install -q -y arrow "brightway2>=2.1.2" "bw2io>=0.7.dev1" \
             "bw2data>=3.6.1" "eidl>=1.2.0" fuzzywuzzy "matplotlib-base>=2.2.2" \
@@ -23,10 +26,10 @@ jobs:
             seaborn presamples openpyxl "pytest>=5.2" pytest-qt \
             pytest-mock "xlrd=1.2.0" coveralls coverage pytest-cov
       - name: Run tests
-        shell: bash
         run: pytest -v --cov=activity_browser
       - name: Upload coverage
+        if: ( ${{ success() }} && matrix.os == ubuntu-latest && matrix.python-version == 3.7 )
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: coveralls
-        if: ( ${{ success() }} && matrix.os == ubuntu-latest && matrix.python-version == 3.7 )
+        # https://github.com/lemurheavy/coveralls-public/issues/1435#issuecomment-763357004
+        run: coveralls --service=github
