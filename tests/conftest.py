@@ -2,6 +2,7 @@
 import shutil
 
 import brightway2 as bw
+from PySide2.QtCore import QCoreApplication as QApplication
 import pytest
 
 from activity_browser import Application
@@ -16,6 +17,8 @@ def ab_application():
     yield app
     # Explicitly close the window
     app.close()
+    QApplication.shutdown()
+    QApplication.shutdown()
     # Explicitly close the connection to all the databases for the pytest_project
     if bw.projects.current == "pytest_project":
         for _, db in bw.config.sqlite3_databases:
